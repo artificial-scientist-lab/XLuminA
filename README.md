@@ -13,7 +13,7 @@
 
 # Basic considerations when using XLuminA:
  
- 1. By default, JAX uses float32 precision. Enable "jax.config.update("jax_enable_x64", True)" at the beginning of the file.
+ 1. By default, JAX uses `float32` precision. Enable `jax.config.update("jax_enable_x64", True)` at the beginning of the file.
  2. Basic units are microns (um) and radians.
  
  3. **IMPORTANT** - RAYLEIGHT-SOMMERFELD PROPAGATION:
