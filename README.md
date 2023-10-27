@@ -9,6 +9,8 @@
 
 XLuminA allows for the simulation, in a (*very*) fast and efficient way, of classical light propagation through optics hardware configurations,and enables the optimization and automated discovery of new setup designs.
 
+<img src="miscellaneous/workflow.png" alt="workflow" width="300"/>
+ 
 The simulator contains many features:
 
 ✦ Light sources (of any wavelength and power) using both scalar or vectorial optical fields.
@@ -155,10 +157,12 @@ The code for each of these optical setups is provided in the Jupyter notebook of
 We evaluated our framework by conducting several tests: 
 
  (1) we compare the running times of the different propagation methods with [Diffractio](https://pypi.org/project/diffractio/) - see [Table 1](https://arxiv.org/abs/2310.08408#).
- ![alt text](miscellaneous/propagation_comparison.pdf)
+
+<img src="miscellaneous/propagation_comparison.png" alt="propagation" width="500"/>
 
  (2) we compare the convergence times of SciPy's [BFGS optimizer](https://docs.scipy.org/doc/scipy/reference/optimize.minimize-bfgs.html#optimize-minimize-bfgs) *vs* JAX's ADAM optimizer when optimizing using XLuminA's optical simulator.
- ![alt text](miscellaneous/convergence_times_comparison.pdf)
+ 
+<img src="miscellaneous/performance.png" alt="performance" width="500"/>
 
 The Jupyter notebook used for running these simulations is provided as `test_diffractio_vs_xlumina.ipynb`. 
 
