@@ -138,7 +138,7 @@ In this section we list the available functions in different files and a brief d
     Before propagating light, one should check which is the minimum distance available for the simulation to be accurate.\
     You can use the following functions:
 
-      `get_RS_minimum_z()`, in `ScalarLight` class, and `get_VRS_minimim_z()`, in `VectorizedLight` class.
+    `get_RS_minimum_z()`, in `ScalarLight` class, and `get_VRS_minimim_z()`, in `VectorizedLight` class.
         
 # 📝 Example of usage:
 
@@ -161,7 +161,6 @@ We evaluated our framework by conducting several tests:
  ![alt text](miscellaneous/convergence_times_comparison.pdf)
 
 The Jupyter notebook used for running these simulations is provided as `test_diffractio_vs_xlumina.ipynb`. 
-
 
 # 🤖🔎 Discovery of new optical setups: 
 
