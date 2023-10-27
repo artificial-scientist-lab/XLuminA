@@ -186,18 +186,32 @@ The Python files used for the discovery of these optical setups, as detailed in 
 
 ★ The large-scale setup functions are defined in `XL_optical_table.py` and `XL_optimizer.py`. 
 
-# 💻 Development
+# 💻 Development:
 
-Some functionalities of XLuminA’s optics simulator (e.g., optical propagation algorithms, planar lens or amplitude masks) are inspired in an open-source NumPy-based Python module for diffraction and interferometry simulation, [Diffractio](https://pypi.org/project/diffractio/), although we have rewritten and modified these approaches to combine them with JAX just-in-time (jit) functionality. On top of that, we developed completely new functions (e.g., beam splitters, LCDs or propagation through high NA objective lens with CZT methods, to name a few) which significantly expand the software capabilities. 
+*Some functionalities of XLuminA’s optics simulator (e.g., optical propagation algorithms, planar lens or amplitude masks) are inspired in an open-source NumPy-based Python module for diffraction and interferometry simulation, [Diffractio](https://pypi.org/project/diffractio/), although we have rewritten and modified these approaches to combine them with JAX just-in-time (jit) functionality. On top of that, we developed completely new functions (e.g., beam splitters, LCDs or propagation through high NA objective lens with CZT methods, to name a few) which significantly expand the software capabilities.*
 
-### Prerequisites 
+## Prerequisites:
 
 To run XLuminA you first need to install [**JAX**](https://jax.readthedocs.io/en/latest/index.html).
 
 *For running the comparison test of the optimizers, you need to install [**SciPy**](https://scipy.org).*
 
-### Clone repository
+## Clone repository:
 
 ```
 git clone https://github.com/artificial-scientist-lab/XLuminA.git
 ```
+
+# 📝 How to cite XLuminA:
+
+If you use this software, please cite as:
+
+`@software{xlumina_2023,
+  author = {Rodríguez, Carla and Arlt, Sören and Möckl, Leonhard and Krenn, Mario},
+  doi = {https://doi.org/10.48550/arXiv.2310.08408},
+  month = {10},
+  title = {{XLuminA: An Auto-differentiating Discovery Framework for Super-Resolution Microscopy}},
+  url = {[https://github.com/github-linguist/linguist](https://github.com/artificial-scientist-lab/XLuminA.git)https://github.com/artificial-scientist-lab/XLuminA.git},
+  version = {0.0.1},
+  year = {2023}
+}`
