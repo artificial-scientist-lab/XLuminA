@@ -9,7 +9,7 @@
 
 XLuminA allows for the simulation, in a (*very*) fast and efficient way, of classical light propagation through optics hardware configurations,and enables the optimization and automated discovery of new setup designs.
 
-<img src="miscellaneous/workflow.png" alt="workflow" width="300"/>
+<img src="miscellaneous/workflow.png" alt="workflow" width="500"/>
  
 The simulator contains many features:
 
