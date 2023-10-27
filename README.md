@@ -15,81 +15,108 @@ The simulator contains many features:
 * Phase masks (e.g., spatial light modulators (SLMs), polarizers and general variable retarders (LCDs)).
 * Amplitude masks (e.g., circles, triangles and squares)
 * Beam splitters
-* The light propagation methods available in XLuminA are
-  * Fast-Fourier-transform (FFT) based numerical integration of the Rayleigh-Sommerfeld diffraction integral: `RS_propagation()` for `ScalarLight` and `VRS_propagation()` for `VectorizedLight`. 
-  * Chirped z-transform: `CZT()` for `ScalarLight` and `VCZT` for `VectorizedLight`. This algorithm is an accelerated version of the Rayleigh-Sommerfeld method, which allows for arbitrary selection and sampling of the region of interest. 
-  * Propagation through high NA objective lenses is availale to replicate strong focusing conditions in polarized light: `high_NA_objective_lens` for `VectorizedLight`.
+* The light propagation methods available in XLuminA are:
+  * [Fast-Fourier-transform (FFT) based numerical integration of the Rayleigh-Sommerfeld diffraction integral](https://doi.org/10.1364/AO.45.001102): `RS_propagation()` for `ScalarLight` and `VRS_propagation()` for `VectorizedLight`. 
+  * [Chirped z-transform](https://doi.org/10.1038/s41377-020-00362-z): `CZT()` for `ScalarLight` and `VCZT` for `VectorizedLight`. This algorithm is an accelerated version of the Rayleigh-Sommerfeld method, which allows for arbitrary selection and sampling of the region of interest. 
+  * Propagation through high NA objective lenses is availale to replicate strong focusing conditions in polarized light: `VCZT_objective_lens` for `VectorizedLight`.
+        
 
 # Overview:
 
-In this section we list the available functions and a brief description:
+In this section we list the available functions in different files and a brief description:
 
-1. In `waveoptics.py`:
+1. In `waveoptics.py`: module for scalar optical fields.
    
    |*Class*|*Functions*|*Description*|
    |---------------|----|-----------|   
    | `ScalarLight`   | | Class for scalar optical fields defined in the XY plane: complex amplitude $U(r) = A(r)*e^{-ikz}$. | 
-   |  | `.RS_propagation` | [Rayleigh-Sommerfeld]() diffraction integral in z-direction (z>0 and z<0). |
+   |  | `.RS_propagation` | [Rayleigh-Sommerfeld](https://doi.org/10.1364/AO.45.001102) diffraction integral in z-direction (z>0 and z<0). |
    |  | `.get_RS_minimum_z()` | Given a quality factor, determines the minimum (trustworthy) distance for `RS_propagation`.|
-   |  | `.CZT` | [Chirped z-transform]() - efficient diffraction using the Bluestein method.|
+   |  | `.CZT` | [Chirped z-transform](https://doi.org/10.1038/s41377-020-00362-z) - efficient diffraction using the Bluestein method.|
    |  | `.draw`  | Plots intensity and phase. | 
    | `LightSource`   | | Class for scalar optical fields defined in the XY plane - defines light source beams. | |
    |  | `.gaussian_beam` | Gaussian beam. |
    |  | `.plane_wave` | Plane wave. |
      
-2. In `vectorizedoptics.py`:
+2. In `vectorizedoptics.py`: module for vectorized optical fields.
 
    |*Class*| *Functions* |*Description*|  
    |---------------|----|-----------|
    | `VectorizedLight`   | | Class for vectorized optical fields defined in the XY plane: $\vec{E} = (E_x, E_y, E_z)$| 
-   |  | `.VRS_propagation` | [Vectorial Rayleigh-Sommerfeld]() diffraction integral in z-direction (z>0 and z<0). |
+   |  | `.VRS_propagation` | [Vectorial Rayleigh-Sommerfeld]([https://doi.org/10.1016/j.optlastec.2006.03.006](https://iopscience.iop.org/article/10.1088/1612-2011/10/6/065004)) diffraction integral in z-direction (z>0 and z<0). |
    |  | `.get_VRS_minimum_z()` | Given a quality factor, determines the minimum (trustworthy) distance for `VRS_propagation`.|
-   |  | `.VCZT` | [Vectorized Chirped z-transform]() - efficient diffraction using the Bluestein method.|
+   |  | `.VCZT` | [Vectorized Chirped z-transform](https://doi.org/10.1038/s41377-020-00362-z) - efficient diffraction using the Bluestein method.|
    |  | `.draw`  | Plots intensity, phase and amplitude. | 
    | `PolarizedLightSource`   | | Class for polarized optical fields defined in the XY plane - defines light source beams. | |
    |  | `.gaussian_beam` | Gaussian beam. |
    |  | `.plane_wave` | Plane wave. |
 
- 3. In `opticalelements.py`: 
+ 3. In `opticalelements.py`: shelf with all the optical elements available.
    
     | *Function* |*Description*|  
     |---------------|----|
-    | *Jones matrices* | | 
+    | ***Jones matrices*** | - | 
     | `jones_LP` | Jones matrix of a [linear polarizer](https://doi.org/10.1201/b19711)| 
     | `jones_general_retarder` | Jones matrix of a [general retarder](https://www.researchgate.net/publication/235963739_Obtainment_of_the_polarizing_and_retardation_parameters_of_a_non-depolarizing_optical_system_from_the_polar_decomposition_of_its_Mueller_matrix). |
     | `jones_sSLM` | Jones matrix of the *superSLM*. |
     | `jones_LCD` | Jones matrix of liquid crystal display (LCD).|
-    | *Polarization-based devices* | | 
+    | ***Polarization-based devices*** | - | 
     |`sSLM` | *super*-Spatial Light Modulator: adds phase mask (pixel-wise) to $E_x$ and $E_y$ independently. |
     | `LCD` | Liquid crystal device: builds any linear wave-plate. | 
     | `linear_polarizer` | Linear polarizer.|
     | `BS` | Single-side coated dielectric beam splitter.|
     | `uncoated_BS` | Uncoated beam splitter. |
     | `VCZT_objective_lens` | High NA objective lens focusing (only for `VectorizedLight`).|
-    | *Scalar light devices* | | 
+    | ***Scalar light devices*** | - | 
     | `phase_scalar_SLM` | Phase mask for the spatial light modulator available for scalar fields. |
     | `SLM` | Spatial light modulator: applies a phase mask to incident scalar field. |
-    | *General elements* | | 
+    | ***General elements*** | - | 
     | `lens` | Transparent lens of variable size and focal length.|
     | `circular_mask` | Circular mask of variable size. |
     | `triangular_mask` | Triangular mask of variable size and orientation.|
     | `rectangular_mask` | Rectangular mask of variable size and orientation.|
     | `annular_aperture` | Annular aperture of variable size.|
     | `forked_grating` | Forked grating of variable size, orientation, and topological charge. |
-    | *Pre-built optical setups* | | 
+    | ***Pre-built optical setups*** | - | 
     | `building_block` | Basic building unit. Consists of a `sSLM`, and `LCD` linked via `VRS_propagation`. |
     | `large_scale_discovery` | Optical table with the general set-up in [Fig.7a](https://arxiv.org/abs/2310.08408#).|
     | `vSTED` | Optical table with the vectorial-based STED setup in [Fig.4a](https://arxiv.org/abs/2310.08408#) .|
-    
+
+4. In `toolbox.py`: file with useful functions. 
+
+   | *Function* |*Description*|  
+   |---------------|----|
+   | ***Basic operations*** | - | 
+   | `space` | Builds the space where light is placed. |
+   | `wrap_phase` | Wraps any phase mask into $[-\pi, \pi]$ range.|
+   | `is_conserving_energy` | Computes the total intensity from the light source and compares is with the propagated light - [Ref](https://doi.org/10.1117/12.482883).|
+   | `delta_kronecker` | Kronecker delta.|
+   | `apply_low_pass_filter` | Given a phase mask, applies low pass filter to smooth.|
+   | `zernike_basis` | Computes the [Zernike polynomials](https://doi.org/10.1364/OE.17.024269).|
+   | `R_zernike` | Computes the radial part R(n,m) of the Zernike polynomial.|
+   | `noll_to_nm` | Computes the (n,m) coefficients given the Noll index for Zernike coefficients.|
+   | `decompose_zernike`| Decompose any input into Zernike basis up to a given order. |
+   | `synthetic_wavefront` | Creates a synthetic wavefront built from the combination of Zernike polynomials.|
+   | `draw_sSLM` | Plots the two phase masks of `sSLM`.|
+   | `moving_avg` | Compute the moving average of a dataset.|
+   | `rotate_mask` | Rotates the (X, Y) frame w.r.t. given point. |
+   | `profile` | Determines the profile of a given input without using interpolation.|
+   | `spot_size` | Computes the spot size as  $\pi (FWHM_x \cdot FWHM_y) /\lambda^2$. |
+   | `compute_fwhm` | Computes FHWM in 2D. |
    
+5. In `lossfunctions.py`: file with loss functions.
 
-
-Examples of some experiments that can be reproduced are:
-
-* Optical telescope (or 4f-correlator),
-* Polarization-based beam shaping as used in [STED (stimulated emission depletion) microscopy](https://opg.optica.org/ol/fulltext.cfm?uri=ol-19-11-780&id=12352), 
-* The [sharp focus of a radially polarized light beam](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.91.233901).
-
+   | *Function* |*Description*|  
+   |---------------|----|
+   | `vMSE_Intensity` | Parallel computation of Mean Squared Error (Intensity) for a given electric field component $E_x$, $E_y$ or $E_z$. |
+   | `MSE_Intensity` | Mean Squared Error (Intensity) for a given electric field component $E_x$, $E_y$ or $E_z$. |
+   | `vMSE_Phase` | Parallel computation of Mean Squared Error (Phase) for a given electric field component $E_x$, $E_y$ or $E_z$. |
+   | `MSE_Phase` | Mean Squared Error (Phase) for a given electric field component $E_x$, $E_y$ or $E_z$. |
+   | `vMSE_Amplitude` | Parallel computation of Mean Squared Error (Amplitude) for a given electric field component $E_x$, $E_y$ or $E_z$. |
+   | `MSE_Amplitude` | Mean Squared Error (Amplitude) for a given electric field component $E_x$, $E_y$ or $E_z$. |
+   | `mean_batch_MSE_Intensity` | Batch-based `MSE_Intensity`.|
+   | `small_area` | Fraction of intensity comprised inside the area of a mask.|
+   | `small_area_STED` | Fraction of intensity comprised inside the area of a mask - STED version.|   
 
 # Basic considerations when using XLuminA:
  
@@ -98,15 +125,21 @@ Examples of some experiments that can be reproduced are:
  2. Basic units are microns (um) and radians.
  
  3. **IMPORTANT** - RAYLEIGHT-SOMMERFELD PROPAGATION:
-    FFT-based diffraction calculation algorithms can be innacurate depending on the computational window size (sampling).\
+    [FFT-based diffraction calculation algorithms](https://doi.org/10.1117/12.482883) can be innacurate depending on the computational window size (sampling).\
     Before propagating light, one should check which is the minimum distance available for the simulation to be accurate.\
     You can use the following functions:
 
-      `get_RS_minimim_z()`, in `ScalarLight` class, and `get_VRS_minimim_z()`, in `VectorizedLight` class.
+      `get_RS_minimum_z()`, in `ScalarLight` class, and `get_VRS_minimim_z()`, in `VectorizedLight` class.
         
 # Discovery of new optical setups 
 
 [...]
+Examples of some experiments that can be reproduced are:
+
+* Optical telescope (or 4f-correlator),
+* Polarization-based beam shaping as used in [STED (stimulated emission depletion) microscopy](https://opg.optica.org/ol/fulltext.cfm?uri=ol-19-11-780&id=12352), 
+* The [sharp focus of a radially polarized light beam](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.91.233901).
+
 
 # Development
 
