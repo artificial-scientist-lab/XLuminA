@@ -179,7 +179,8 @@ The Python files used for the discovery of these optical setups, as detailed in 
 | ***Optical telescope*** | `four_f_optical_table.py` | `four_f_optimizer.py`| `Generate_synthetic_data.py` |
 | ***Polarization-based STED*** | `vsted_optical_table.py` | `vsted_optimizer.py`| N/A |
 | ***Sharp focus*** | `sharp_focus_optical_table.py` | `sharp_focus_optimizer.py`| N/A |
-| ***Sharp focus*** | `large_scale_discovery_optical_table.py` | `large_scale_discovery_optimizer.py`| N/A |
+
+★ The large-scale setup functions are defined in `XL_optical_table.py` and `XL_optimizer.py`. 
 
 # 💻 Development
 
