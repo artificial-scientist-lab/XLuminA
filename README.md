@@ -33,15 +33,19 @@ The simulator contains many features:
 
 In this section we list the available functions in different files and a brief description:
 
-1. In `waveoptics.py`: module for scalar optical fields.
+1. In `wave_optics.py`: module for scalar optical fields.
    
    |*Class*|*Functions*|*Description*|
    |---------------|----|-----------|   
    | `ScalarLight`   | | Class for scalar optical fields defined in the XY plane: complex amplitude $U(r) = A(r)*e^{-ikz}$. | 
+   |  | `.draw`  | Plots intensity and phase. | 
+   |  | `.apply_circular_mask`  | Apply a circular mask of variable radius. |
+   |  | `.apply_triangular_mask`  | Apply a triangular mask of variable size. |
+   |  | `.apply_rectangular_mask`  | Apply a rectangular mask of variable size. |
+   |  | `.apply_annular_aperture`  | Apply annular aperture of variable size. |
    |  | `.RS_propagation` | [Rayleigh-Sommerfeld](https://doi.org/10.1364/AO.45.001102) diffraction integral in z-direction (z>0 and z<0). |
    |  | `.get_RS_minimum_z()` | Given a quality factor, determines the minimum (trustworthy) distance for `RS_propagation`.|
    |  | `.CZT` | [Chirped z-transform](https://doi.org/10.1038/s41377-020-00362-z) - efficient diffraction using the Bluestein method.|
-   |  | `.draw`  | Plots intensity and phase. | 
    | `LightSource`   | | Class for scalar optical fields defined in the XY plane - defines light source beams. | |
    |  | `.gaussian_beam` | Gaussian beam. |
    |  | `.plane_wave` | Plane wave. |
@@ -52,10 +56,11 @@ In this section we list the available functions in different files and a brief d
    |*Class*| *Functions* |*Description*|  
    |---------------|----|-----------|
    | `VectorizedLight`   | | Class for vectorized optical fields defined in the XY plane: $\vec{E} = (E_x, E_y, E_z)$| 
+   |  | `.draw`  | Plots intensity, phase and amplitude. | 
+   |  | `.draw_intensity_profile`  | Plots intensity profile. | 
    |  | `.VRS_propagation` | [Vectorial Rayleigh-Sommerfeld](https://iopscience.iop.org/article/10.1088/1612-2011/10/6/065004) diffraction integral in z-direction (z>0 and z<0). |
    |  | `.get_VRS_minimum_z()` | Given a quality factor, determines the minimum (trustworthy) distance for `VRS_propagation`.|
    |  | `.VCZT` | [Vectorized Chirped z-transform](https://doi.org/10.1038/s41377-020-00362-z) - efficient diffraction using the Bluestein method.|
-   |  | `.draw`  | Plots intensity, phase and amplitude. | 
    | `PolarizedLightSource`   | | Class for polarized optical fields defined in the XY plane - defines light source beams. | |
    |  | `.gaussian_beam` | Gaussian beam. |
    |  | `.plane_wave` | Plane wave. |
@@ -65,6 +70,9 @@ In this section we list the available functions in different files and a brief d
    
     | *Function* |*Description*|  
     |---------------|----|
+    | ***Scalar light devices*** | - | 
+    | `phase_scalar_SLM` | Phase mask for the spatial light modulator available for scalar fields. |
+    | `SLM` | Spatial light modulator: applies a phase mask to incident scalar field. |
     | ***Jones matrices*** | - | 
     | `jones_LP` | Jones matrix of a [linear polarizer](https://doi.org/10.1201/b19711)| 
     | `jones_general_retarder` | Jones matrix of a [general retarder](https://www.researchgate.net/publication/235963739_Obtainment_of_the_polarizing_and_retardation_parameters_of_a_non-depolarizing_optical_system_from_the_polar_decomposition_of_its_Mueller_matrix). |
@@ -75,11 +83,8 @@ In this section we list the available functions in different files and a brief d
     | `LCD` | Liquid crystal device: builds any linear wave-plate. | 
     | `linear_polarizer` | Linear polarizer.|
     | `BS` | Single-side coated dielectric beam splitter.|
-    | `uncoated_BS` | Uncoated beam splitter. |
-    | `VCZT_objective_lens` | High NA objective lens focusing (only for `VectorizedLight`).|
-    | ***Scalar light devices*** | - | 
-    | `phase_scalar_SLM` | Phase mask for the spatial light modulator available for scalar fields. |
-    | `SLM` | Spatial light modulator: applies a phase mask to incident scalar field. |
+    | `high_NA_objective_lens` | High NA objective lens (only for `VectorizedLight`).|
+    | `VCZT_objective_lens` | Propagation through high NA objective lens (only for `VectorizedLight`).|
     | ***General elements*** | - | 
     | `lens` | Transparent lens of variable size and focal length.|
     | `circular_mask` | Circular mask of variable size. |
@@ -102,12 +107,7 @@ In this section we list the available functions in different files and a brief d
    | `wrap_phase` | Wraps any phase mask into $[-\pi, \pi]$ range.|
    | `is_conserving_energy` | Computes the total intensity from the light source and compares is with the propagated light - [Ref](https://doi.org/10.1117/12.482883).|
    | `delta_kronecker` | Kronecker delta.|
-   | `apply_low_pass_filter` | Given a phase mask, applies low pass filter to smooth.|
-   | `zernike_basis` | Computes the [Zernike polynomials](https://doi.org/10.1364/OE.17.024269).|
-   | `R_zernike` | Computes the radial part R(n,m) of the Zernike polynomial.|
-   | `noll_to_nm` | Computes the (n,m) coefficients given the Noll index for Zernike coefficients.|
-   | `decompose_zernike`| Decompose any input into Zernike basis up to a given order. |
-   | `synthetic_wavefront` | Creates a synthetic wavefront built from the combination of Zernike polynomials.|
+   | `build_LCD_cell` | Builds the cell for `LCD`.|
    | `draw_sSLM` | Plots the two phase masks of `sSLM`.|
    | `moving_avg` | Compute the moving average of a dataset.|
    | `rotate_mask` | Rotates the (X, Y) frame w.r.t. given point. |
