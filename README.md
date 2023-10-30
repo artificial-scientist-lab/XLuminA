@@ -44,14 +44,14 @@ In this section we list the available functions in different files and a brief d
    |  | `.apply_rectangular_mask`  | Apply a rectangular mask of variable size. |
    |  | `.apply_annular_aperture`  | Apply annular aperture of variable size. |
    |  | `.RS_propagation` | [Rayleigh-Sommerfeld](https://doi.org/10.1364/AO.45.001102) diffraction integral in z-direction (z>0 and z<0). |
-   |  | `.get_RS_minimum_z()` | Given a quality factor, determines the minimum (trustworthy) distance for `RS_propagation`.|
+   |  | `.get_RS_minimum_z` | Given a quality factor, determines the minimum (trustworthy) distance for `RS_propagation`.|
    |  | `.CZT` | [Chirped z-transform](https://doi.org/10.1038/s41377-020-00362-z) - efficient diffraction using the Bluestein method.|
    | `LightSource`   | | Class for scalar optical fields defined in the XY plane - defines light source beams. | |
    |  | `.gaussian_beam` | Gaussian beam. |
    |  | `.plane_wave` | Plane wave. |
 
      
-2. In `vectorizedoptics.py`: module for vectorized optical fields.
+2. In `vectorized_optics.py`: module for vectorized optical fields.
 
    |*Class*| *Functions* |*Description*|  
    |---------------|----|-----------|
@@ -59,14 +59,14 @@ In this section we list the available functions in different files and a brief d
    |  | `.draw`  | Plots intensity, phase and amplitude. | 
    |  | `.draw_intensity_profile`  | Plots intensity profile. | 
    |  | `.VRS_propagation` | [Vectorial Rayleigh-Sommerfeld](https://iopscience.iop.org/article/10.1088/1612-2011/10/6/065004) diffraction integral in z-direction (z>0 and z<0). |
-   |  | `.get_VRS_minimum_z()` | Given a quality factor, determines the minimum (trustworthy) distance for `VRS_propagation`.|
+   |  | `.get_VRS_minimum_z` | Given a quality factor, determines the minimum (trustworthy) distance for `VRS_propagation`.|
    |  | `.VCZT` | [Vectorized Chirped z-transform](https://doi.org/10.1038/s41377-020-00362-z) - efficient diffraction using the Bluestein method.|
    | `PolarizedLightSource`   | | Class for polarized optical fields defined in the XY plane - defines light source beams. | |
    |  | `.gaussian_beam` | Gaussian beam. |
    |  | `.plane_wave` | Plane wave. |
 
 
- 3. In `opticalelements.py`: shelf with all the optical elements available.
+ 3. In `optical_elements.py`: shelf with all the optical elements available.
    
     | *Function* |*Description*|  
     |---------------|----|
@@ -115,7 +115,7 @@ In this section we list the available functions in different files and a brief d
    | `spot_size` | Computes the spot size as  $\pi (FWHM_x \cdot FWHM_y) /\lambda^2$. |
    | `compute_fwhm` | Computes FHWM in 2D. |
    
-5. In `lossfunctions.py`: file with loss functions.
+5. In `loss_functions.py`: file with loss functions.
 
    | *Function* |*Description*|  
    |---------------|----|
@@ -140,7 +140,7 @@ In this section we list the available functions in different files and a brief d
     Before propagating light, one should check which is the minimum distance available for the simulation to be accurate.\
     You can use the following functions:
 
-    `get_RS_minimum_z()`,for `ScalarLight` class, and `get_VRS_minimum_z()`, for `VectorizedLight` class.
+    `get_RS_minimum_z`,for `ScalarLight` class, and `get_VRS_minimum_z`, for `VectorizedLight` class.
         
 # 📝 Example of usage:
 
