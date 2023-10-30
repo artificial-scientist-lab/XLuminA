@@ -140,7 +140,7 @@ In this section we list the available functions in different files and a brief d
     Before propagating light, one should check which is the minimum distance available for the simulation to be accurate.\
     You can use the following functions:
 
-    `get_RS_minimum_z()`, in `ScalarLight` class, and `get_VRS_minimim_z()`, in `VectorizedLight` class.
+    `get_RS_minimum_z()`,for `ScalarLight` class, and `get_VRS_minimum_z()`, for `VectorizedLight` class.
         
 # 📝 Example of usage:
 
