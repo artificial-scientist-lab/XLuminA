@@ -49,7 +49,7 @@ class ScalarLight:
         self.n = 1
         self.field = jnp.zeros((jnp.shape(x)[0], jnp.shape(y)[0]))
         self.info = 'Wave optics light'
-
+        
     def draw(self, xlim='', ylim='', kind='', extra_title='', save_file=False, filename=''):
         """
         Plots ScalarLight.

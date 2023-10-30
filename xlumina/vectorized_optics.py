@@ -1,11 +1,11 @@
 import numpy as np
 import jax.numpy as jnp
-from jax import jit, vmap, config, 
+from jax import jit, vmap, config
 from functools import partial
 import matplotlib.pyplot as plt
 import time
 
-from toolbox import rotate_frame, profile
+from toolbox import profile
 from wave_optics import build_grid, RS_propagation_jit, build_CZT_grid, CZT_jit, CZT_for_high_NA_jit
 
 # Comment this line if float32 is enough precision for you. 
