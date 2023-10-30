@@ -206,12 +206,11 @@ git clone https://github.com/artificial-scientist-lab/XLuminA.git
 
 If you use this software, please cite as:
 
-`@software{xlumina_2023,
-  author = {Rodríguez, Carla and Arlt, Sören and Möckl, Leonhard and Krenn, Mario},
-  doi = {https://doi.org/10.48550/arXiv.2310.08408},
-  month = {10},
-  title = {{XLuminA: An Auto-differentiating Discovery Framework for Super-Resolution Microscopy}},
-  url = {[https://github.com/github-linguist/linguist](https://github.com/artificial-scientist-lab/XLuminA.git)https://github.com/artificial-scientist-lab/XLuminA.git},
-  version = {0.0.1},
-  year = {2023}
-}`
+    @misc{rodríguez2023xlumina,
+      title={XLuminA: An Auto-differentiating Discovery Framework for Super-Resolution Microscopy}, 
+      author={Carla Rodríguez and Sören Arlt and Leonhard Möckl and Mario Krenn},      
+      year={2023},      
+      eprint={2310.08408},      
+      archivePrefix={arXiv},      
+      primaryClass={physics.optics}      
+    }
