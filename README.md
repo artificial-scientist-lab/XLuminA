@@ -96,7 +96,8 @@ In this section we list the available functions in different files and a brief d
     | `building_block` | Basic building unit. Consists of a `sSLM`, and `LCD` linked via `VRS_propagation`. |
     | `large_scale_discovery` | Optical table with the general set-up in *Fig.7a* of [our paper](https://arxiv.org/abs/2310.08408#).|
     | `vSTED` | Optical table with the vectorial-based STED setup in *Fig.4a* of [our paper](https://arxiv.org/abs/2310.08408#) .|
-
+    | `sharp_focus` | Optical table with the sharp focus of a radially polarized light beam setup in *Fig.5a* of [our paper](https://arxiv.org/abs/2310.08408#) .|
+    
 
 4. In `toolbox.py`: file with useful functions. 
 
