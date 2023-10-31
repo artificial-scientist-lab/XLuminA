@@ -19,7 +19,6 @@ shape = jnp.shape(x)[0]
 
 
 # 2. Define the optical functions:
-
 def batch_dualSLM_4f(input_field, x, y, wavelength, parameters):
     """
     [4f system coded exclusively for batch optimization purposes].
@@ -88,7 +87,6 @@ def vector_dualSLM_4f_system(input_fields, x, y, wavelength, parameters):
 
 
 # 3. Define the loss function for batch optimization.
-
 def loss_dualSLM(parameters, input_fields, target_fields):
     """
     Loss function for 4f system batch optimization. It computes the MSE between the optimized light and the target field.
