@@ -45,6 +45,7 @@ config.update("jax_enable_x64", True)
         - building_block
         - large_scale_discovery
         - vSTED
+        - sharp_focus
 """
 
 # ------------------------------------------------------------------------------------------------
@@ -719,3 +720,42 @@ def vSTED(excitation_beam, depletion_beam, parameters, fixed_params):
     i_eff = jnp.clip(i_ex - i_dep, a_min=0, a_max=10e10)
 
     return i_eff, i_ex, i_dep, ex_f, dep_f
+
+def sharp_focus(input_field, parameters, fixed_params):
+    """
+    Define an optical table for sharp focus. 
+    
+    Illustrative scheme:
+
+    (Ex, Ey) --> PBS --> Ex --> Modulate: SLM(alpha) --> Ex' --> PBS --> (Ex', Ey') --> Modulate: LCD(eta, theta) 
+                  |                                               |                               |
+                  Ey ---------> Modulate: SLM(phi) ----> Ey' -----/                          (Ex'', Ey'') --> Propagate: VRS(z) --> objective_lens(r,f)
+
+    Parameters:
+        input_field (VectorizedLight): Light to be modulated.
+        parameters (list): Parameters to pass to the optimizer [alpha, phi, eta, theta, z1 and z2] for sSLM, LCD and VRS.
+        fixed_params (jnp.array): Parameters to maintain fixed during optimization [r, f] that is radius and focal of the high NA objective lens.
+        
+    Returns VectorizedLight in the focal plane.
+    """
+    offset = 1.4 # cm 
+    # Clip distances z1 and z2 to avoid innacurate simulations.
+    parameters[4] = jnp.clip(parameters[4], offset, 1000)
+    parameters[5] = jnp.clip(parameters[5], offset, 1000)
+
+    # 1. Apply super-SLM:
+    modulated_light = sSLM(input_field, parameters[0], parameters[1])
+    
+    # 2. Propagate:
+    propagated_1, _ = modulated_light.VRS_propagation(z=parameters[4]*cm)
+    
+    # 3. Apply LCD: 
+    modulated_light_2 = LCD(propagated_1, parameters[2], parameters[3])
+    
+    # 4. Propagate:
+    propagated_2, _ = modulated_light_2.VRS_propagation(z=parameters[5]*cm)
+    
+    # 5. Strong focus using high NA objective:
+    focused_light = VCZT_objective_lens(propagated_2, r=fixed_params[0], f=fixed_params[1], xout=fixed_params[2], yout=fixed_params[3])
+    
+    return focused_light
