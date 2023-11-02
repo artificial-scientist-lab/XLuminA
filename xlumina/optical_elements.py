@@ -43,7 +43,7 @@ config.update("jax_enable_x64", True)
     
     (5) Pre-built optical set-ups:
         - building_block
-        - large_scale_discovery
+        - xl_setup
         - vSTED
         - sharp_focus
 """
@@ -622,7 +622,7 @@ def building_block(input_light, alpha, phi, z, eta, theta):
     # Apply LCD:
     return LCD(l_propagated, eta, theta)
 
-def large_scale_discovery(ls1, ls2, parameters, fixed_params):
+def xl_setup(ls1, ls2, parameters, fixed_params):
     """
     Optical table with a more general set-up. Building blocks are [ls, sSLM, LCD], joint by BS. 
     
@@ -739,6 +739,7 @@ def sharp_focus(input_field, parameters, fixed_params):
     Returns VectorizedLight in the focal plane.
     """
     offset = 1.4 # cm 
+    
     # Clip distances z1 and z2 to avoid innacurate simulations.
     parameters[4] = jnp.clip(parameters[4], offset, 1000)
     parameters[5] = jnp.clip(parameters[5], offset, 1000)
