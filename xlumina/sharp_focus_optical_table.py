@@ -7,7 +7,7 @@ from jax import vmap
 import jax.numpy as jnp
 
 """
-OPTICAL TABLE WITH POLARIZATION-BASED STED.
+OPTICAL TABLE FOR SHARP FOCUS.
 """
 
 # 1. System specs:
