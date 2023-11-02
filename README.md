@@ -94,7 +94,7 @@ In this section we list the available functions in different files and a brief d
     | `forked_grating` | Forked grating of variable size, orientation, and topological charge. |
     | ***Pre-built optical setups*** | - | 
     | `building_block` | Basic building unit. Consists of a `sSLM`, and `LCD` linked via `VRS_propagation`. |
-    | `large_scale_discovery` | Optical table with the general set-up in *Fig.7a* of [our paper](https://arxiv.org/abs/2310.08408#).|
+    | `xl_setup` | Optical table with the general set-up in *Fig.7a* of [our paper](https://arxiv.org/abs/2310.08408#).|
     | `vSTED` | Optical table with the vectorial-based STED setup in *Fig.4a* of [our paper](https://arxiv.org/abs/2310.08408#) .|
     | `sharp_focus` | Optical table with the sharp focus of a radially polarized light beam setup in *Fig.5a* of [our paper](https://arxiv.org/abs/2310.08408#) .|
     
@@ -185,7 +185,7 @@ The Python files used for the discovery of these optical setups, as detailed in 
 | ***Polarization-based STED*** | `vsted_optical_table.py` | `vsted_optimizer.py`| N/A |
 | ***Sharp focus*** | `sharp_focus_optical_table.py` | `sharp_focus_optimizer.py`| N/A |
 
-★ The large-scale setup functions are defined in `XL_optical_table.py` and `XL_optimizer.py`. 
+★ The large-scale setup functions are defined in `xl_optical_table.py` and `xl_optimizer.py`. 
 
 # 💻 Development:
 
