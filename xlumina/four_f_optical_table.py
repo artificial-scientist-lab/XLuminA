@@ -55,7 +55,7 @@ def batch_dualSLM_4f(input_field, x, y, wavelength, parameters):
     # Feed SLM_1 with parameters[2] and apply the mask to the forward beam
     modulated_slm1, slm_1 = SLM(light_stage0, parameters[3] * (2*jnp.pi) - jnp.pi, shape)
 
-     """ Stage 1: Propagation """
+    """ Stage 1: Propagation """
     # Propagate the SLM_1 output beam to another distance z
     light_stage1, quality_1 = modulated_slm1.RS_propagation(z=(jnp.abs(parameters[1]) * 100 + offset)*cm)
 
