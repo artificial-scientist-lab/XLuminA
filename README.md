@@ -141,7 +141,7 @@ In this section we list the available functions in different files and a brief d
     Before propagating light, one should check which is the minimum distance available for the simulation to be accurate.\
     You can use the following functions:
 
-    `get_RS_minimum_z`,for `ScalarLight` class, and `get_VRS_minimum_z`, for `VectorizedLight` class.
+    `get_RS_minimum_z`, for `ScalarLight` class, and `get_VRS_minimum_z`, for `VectorizedLight` class.
         
 # 📝 Example of usage:
 
@@ -193,9 +193,14 @@ The Python files used for the discovery of these optical setups, as detailed in 
 
 ## Prerequisites:
 
-To run XLuminA you first need to install [**JAX**](https://jax.readthedocs.io/en/latest/index.html).
+To run XLuminA you first need to install [**JAX**](https://jax.readthedocs.io/en/latest/index.html) - The version of JAX used in this project is v0.4.13;
 
-*For running the comparison test of the optimizers, you need to install [**SciPy**](https://scipy.org).*
+and [**Optax**](https://github.com/google-deepmind/optax/tree/master) - The version of Optax used in this project is v0.1.7.
+
+
+*To run the comparison test of the propagation functions, you need to install [**Diffractio**](https://https://pypi.org/project/diffractio/).*
+
+*To run the comparison test of the optimizers, you need to install [**SciPy**](https://scipy.org).*
 
 ## Clone repository:
 
