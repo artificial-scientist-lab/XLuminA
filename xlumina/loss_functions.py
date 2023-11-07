@@ -32,7 +32,7 @@ def small_area_STED(sted_i_effective):
     epsilon = 0.5
     I = sted_i_effective / jnp.sum(sted_i_effective)
     mask = jnp.where(I > epsilon*jnp.max(I), 1, 0)
-    return 1 / (jnp.sum(mask * I))
+    return jnp.sum(mask) / (jnp.sum(mask * I))
 
 def small_area(focused_field):
     """
@@ -47,7 +47,7 @@ def small_area(focused_field):
     epsilon = 0.5
     I = jnp.abs(focused_field.Ez)**2 / jnp.sum(jnp.abs(focused_field.Ez)**2)
     mask = jnp.where(I > epsilon*jnp.max(I), 1, 0)
-    return 1 / jnp.sum(mask * I)
+    return jnp.sum(mask) / jnp.sum(mask * I)
 
 def mean_batch_MSE_Intensity(optimized, target):
     """
