@@ -1,4 +1,4 @@
-from __init__ import um, nm, cm
+from __init__ import um, nm, cm, mm
 from vectorized_optics import *
 from optical_elements import vSTED
 from loss_functions import small_area_STED  

@@ -2,7 +2,7 @@ from vsted_optical_table import *
 import time
 import jax
 from jax import grad, jit
-from jax.example_libraries import optimizers
+import optax
 import numpy as np
 import jax.numpy as jnp
 
@@ -16,60 +16,78 @@ print(jax.devices(), flush=True)
 # Global variable
 shape = jnp.array([sensor_lateral_size, sensor_lateral_size])
 
-# Define the update:
-@jit
-def update(step_index, optimizer_state):
-    # define single update step
-    parameters = get_params(optimizer_state)
-    # Call the loss function and compute the gradients
-    computed_loss = loss_value(parameters)
-    computed_gradients = grad(loss_value, allow_int=True)(parameters)
+# Define the loss function and compute its gradients:
+loss_function = jit(loss_sted)
 
-    return opt_update(step_index, computed_gradients, optimizer_state), computed_loss, computed_gradients
+# ----------------------------------------------------
 
-# JIT the loss function:
-loss_value = jit(loss_sted)
+def fit(params: optax.Params, optimizer: optax.GradientTransformation, num_iterations) -> optax.Params:
+    
+    opt_state = optimizer.init(params)
+    
+    @jit
+    def update(params, opt_state):
+        # Define single update step:
+        # JIT the loss and compute 
+        loss_value, grads = jax.value_and_grad(loss_function)(params)
+        # Update the state of the optimizer
+        updates, opt_state = optimizer.update(grads, opt_state, params)
+        params = optax.apply_updates(params, updates)
+        return params, opt_state, loss_value
+
+    # Initialize some parameters
+    iteration_steps=[]
+    loss_list=[]
+    
+    n_best = 500
+    best_loss = 1e2
+    best_params = None
+    best_step = 0
+    
+    print('Starting Optimization', flush=True)
+    
+    for step in range(num_iterations):
+        params, opt_state, loss_value = update(params, opt_state)
+        print(f"Step {step}")
+        print(f"Loss {loss_value}")
+        iteration_steps.append(step)
+        loss_list.append(loss_value)
+        
+        # Update the `best_loss` value:
+        if loss_value < best_loss:
+            # Best loss value
+            best_loss = loss_value
+            # Best optimized parameters
+            best_params = params
+            best_step = step
+            print('Best loss value is updated')
+
+        if step % 100 == 0:
+            # Stopping criteria: if best_loss has not changed every 500 steps, stop.
+            if step - best_step > n_best:
+                print(f'Stopping criterion: no improvement in loss value for {n_best} steps')
+                break
+    
+    print(f'Best loss: {best_loss} at step {best_step}')
+    print(f'Best parameters: {best_params}')  
+    return best_params, best_loss, iteration_steps, loss_list
+
+# ----------------------------------------------------
 
 # Optimizer settings
-STEP_SIZE = 0.01
-num_iterations = 50000
+num_iterations = 10000
 n_best = 500
 best_loss = 1e2
 best_params = None
 best_step = 0
 
-# Init random parameters:
-phase_1 = jnp.array([np.random.uniform(-jnp.pi, jnp.pi, shape)], dtype=jnp.float64)[0]
-init_params = [phase_1]
+STEP_SIZE = 0.01
+  
+# Parameters for STED
+init_params = [jnp.array([np.random.uniform(0, 1, shape)], dtype=jnp.float64)[0]]
 
-# Define the optimizer and initialize it
-opt_init, opt_update, get_params = optimizers.adam(STEP_SIZE)
-opt_state = opt_init(init_params)
-           
-# Optimize in a loop:
-print('Starting Optimization', flush=True)    
-tic = time.perf_counter()
+# Init optimizer:
+optimizer = optax.adam(STEP_SIZE)
 
-for step in range(num_iterations):
-    
-    # Perform an update step:
-    opt_state, loss_value, gradients = update(step, opt_state)
-    
-    # Update the `best_loss` value:
-    if loss_value < best_loss:
-        # Best loss value
-        best_loss = loss_value
-        # Best optimized parameters
-        best_params = get_params(opt_state)
-        best_step = step
-        print('Best loss value is updated')
-
-    if step % 500 == 0:
-        # Stopping criteria: if best_loss has not changed every 500 steps, stop.
-        if step - best_step > n_best:
-            print(f'Stopping criterion: no improvement in loss value for {n_best} steps')
-            break
-
-print(f'Best loss: {best_loss} at step {best_step}')
-print(f'Best parameters: {best_params}')
-print("Time taken to optimize - in seconds", time.perf_counter() - tic)
+# Apply fit function:
+best_params, best_loss, iteration_steps, loss_list = fit(init_params, optimizer, num_iterations)
