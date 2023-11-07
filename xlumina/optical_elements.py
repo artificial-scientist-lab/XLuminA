@@ -698,12 +698,16 @@ def vSTED(excitation_beam, depletion_beam, parameters, fixed_params):
         i_dep (jnp.array) depletion intensity in the focal plane,
         ex_f (object) excitation beam in the focal plane,
         dep_f (object) depletion beam in the focal plane.
+        
+    Parameters in the optimizer are from (0,1). Conversion factor here are: 
+        
+        Convert (0,1) to phase (in radians) -> Conversion factor (-pi, pi) + pi = (0, 2pi) = (0, 1). 
     """
     # Estimate the offset via get_VRS_minimum().
     offset = 24000 #microns
     
     # Apply phase mask to depletion beam. We use only the SLM in sSLM corresponding to the input polarization state. The other is set to zero.
-    dep_modulated = sSLM(depletion_beam, parameters[0], jnp.zeros((2048, 2048)))
+    dep_modulated = sSLM(depletion_beam, parameters[0]* 2 * jnp.pi - jnp.pi, jnp.zeros((2048, 2048)))
     
     # Propagate:
     dep_propagated, _ = dep_modulated.VRS_propagation(z=offset)
@@ -737,24 +741,25 @@ def sharp_focus(input_field, parameters, fixed_params):
         fixed_params (jnp.array): Parameters to maintain fixed during optimization [r, f] that is radius and focal of the high NA objective lens.
         
     Returns VectorizedLight in the focal plane.
-    """
-    offset = 1.4 # cm 
     
-    # Clip distances z1 and z2 to avoid innacurate simulations.
-    parameters[4] = jnp.clip(parameters[4], offset, 1000)
-    parameters[5] = jnp.clip(parameters[5], offset, 1000)
+    Parameters in the optimizer are from (0,1). Conversion factor here are:
+    
+        1. Convert (0,1) to distance in cm -> Conversion factor for (offset, 100)*cm = (offset/100, 1).
+        2. Convert (0,1) to phase (in radians) -> Conversion factor (-pi, pi) + pi = (0, 2pi) = (0, 1). 
+    """
+    offset = 3.8 # cm 
 
     # 1. Apply super-SLM:
-    modulated_light = sSLM(input_field, parameters[0], parameters[1])
+    modulated_light = sSLM(input_field, parameters[0]* 2 * jnp.pi - jnp.pi, parameters[1]* 2 * jnp.pi - jnp.pi)
     
     # 2. Propagate:
-    propagated_1, _ = modulated_light.VRS_propagation(z=parameters[4]*cm)
+    propagated_1, _ = modulated_light.VRS_propagation(z=(jnp.abs(parameters[4])*100+offset)*cm)
     
     # 3. Apply LCD: 
-    modulated_light_2 = LCD(propagated_1, parameters[2], parameters[3])
+    modulated_light_2 = LCD(propagated_1, parameters[2]* 2 * jnp.pi - jnp.pi, parameters[3]* 2 * jnp.pi - jnp.pi)
     
     # 4. Propagate:
-    propagated_2, _ = modulated_light_2.VRS_propagation(z=parameters[5]*cm)
+    propagated_2, _ = modulated_light_2.VRS_propagation(z=(jnp.abs(parameters[5])*100+offset)*cm)
     
     # 5. Strong focus using high NA objective:
     focused_light = VCZT_objective_lens(propagated_2, r=fixed_params[0], f=fixed_params[1], xout=fixed_params[2], yout=fixed_params[3])
