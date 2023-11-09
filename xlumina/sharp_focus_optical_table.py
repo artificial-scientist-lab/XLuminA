@@ -1,4 +1,4 @@
-from __init__ import um, nm
+from __init__ import um, nm, mm
 from vectorized_optics import *
 from optical_elements import sharp_focus
 from loss_functions import small_area
@@ -12,11 +12,9 @@ OPTICAL TABLE FOR SHARP FOCUS.
 
 # 1. System specs:
 sensor_lateral_size = 2048  # Resolution
-sted_wavelength = 650*nm
-ex_wavelength = 532*nm
-x_total = 2000*um 
+wavelength = .6328 * um
+x_total = 2500 * um
 x, y = space(x_total, sensor_lateral_size)
-shape = jnp.shape(x)[0]
 
 # 2. Define the optical functions: linearly polarized gaussian beam at 45 deg.
 w0 = (1200*um, 1200*um)
