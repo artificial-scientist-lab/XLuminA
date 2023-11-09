@@ -198,9 +198,9 @@ To run XLuminA you first need to install [**JAX**](https://jax.readthedocs.io/en
 and [**Optax**](https://github.com/google-deepmind/optax/tree/master) - The version of Optax used in this project is v0.1.7.
 
 
-*To run the comparison test of the propagation functions, you need to install [**Diffractio**](https://https://pypi.org/project/diffractio/).*
+*To run the comparison test of the propagation functions, you need to install [**Diffractio**](https://https://pypi.org/project/diffractio/) - The version of Diffractio used in this project is v0.1.1.*
 
-*To run the comparison test of the optimizers, you need to install [**SciPy**](https://scipy.org).*
+*To run the comparison test of the optimizers, you need to install [**SciPy**](https://scipy.org) - The version of SciPy used in this project is v1.10.1.*
 
 ## Clone repository:
 
