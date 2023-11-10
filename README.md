@@ -29,6 +29,51 @@ The simulator contains many features:
     
   - Propagation through [high NA objective lenses](https://doi.org/10.1016/j.optcom.2010.07.030) is availale to replicate strong focusing conditions in polarized light.
         
+# 📝 Example of usage:
+
+Examples of some experiments that can be reproduced with XLuminA are:
+
+* Optical telescope (or 4f-correlator),
+* Polarization-based beam shaping as used in [STED (stimulated emission depletion) microscopy](https://opg.optica.org/ol/fulltext.cfm?uri=ol-19-11-780&id=12352), 
+* The [sharp focus of a radially polarized light beam](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.91.233901).
+
+The code for each of these optical setups is provided in the Jupyter notebook of [examples.ipynb](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/examples.ipynb).
+
+# 🚀 Testing XLuminA's efficiency:
+
+We evaluated our framework by conducting several tests: 
+
+ (1) we compare the running times of the different propagation methods with [Diffractio](https://pypi.org/project/diffractio/) - see [Table 1](https://arxiv.org/abs/2310.08408#).
+
+<img src="miscellaneous/propagation_comparison.png" alt="propagation" width="500"/>
+
+ (2) we compare the convergence times of SciPy's [BFGS optimizer](https://docs.scipy.org/doc/scipy/reference/optimize.minimize-bfgs.html#optimize-minimize-bfgs) *vs* JAX's ADAM optimizer when optimizing using XLuminA's optical simulator.
+ 
+<img src="miscellaneous/performance.png" alt="performance" width="500"/>
+
+The Jupyter notebook used for running these simulations is provided as [test_diffractio_vs_xlumina.ipynb](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/test_diffractio_vs_xlumina.ipynb). 
+
+# 🤖🔎 Discovery of new optical setups: 
+
+With XLuminA we were able to re-discover three foundational optics experiments: 
+
+➤ Optical telescope (or 4f-correlator),
+
+➤ Polarization-based beam shaping as used in [STED (stimulated emission depletion) microscopy](https://opg.optica.org/ol/fulltext.cfm?uri=ol-19-11-780&id=12352), 
+
+➤ The [sharp focus of a radially polarized light beam](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.91.233901).
+
+The Python files used for the discovery of these optical setups, as detailed in [our paper](https://arxiv.org/abs/2310.08408#), are organized in pairs of `optical_table` and `optimizer` as follows:
+
+| **Experiment name** | 🔬 Optical table | 🤖 Optimizer | 📄 File for data |
+|----------------|---------------|-----------|----------|
+| ***Optical telescope*** | `four_f_optical_table.py` | `four_f_optimizer.py`| `Generate_synthetic_data.py` |
+| ***Polarization-based STED*** | `vsted_optical_table.py` | `vsted_optimizer.py`| N/A |
+| ***Sharp focus*** | `sharp_focus_optical_table.py` | `sharp_focus_optimizer.py`| N/A |
+
+★ The large-scale setup functions are defined in `xl_optical_table.py` and `xl_optimizer.py`. 
+
+
 # 👀 Overview:
 
 In this section we list the available functions in different files and a brief description:
@@ -143,49 +188,6 @@ In this section we list the available functions in different files and a brief d
 
     `get_RS_minimum_z`, for `ScalarLight` class, and `get_VRS_minimum_z`, for `VectorizedLight` class.
         
-# 📝 Example of usage:
-
-Examples of some experiments that can be reproduced with XLuminA are:
-
-* Optical telescope (or 4f-correlator),
-* Polarization-based beam shaping as used in [STED (stimulated emission depletion) microscopy](https://opg.optica.org/ol/fulltext.cfm?uri=ol-19-11-780&id=12352), 
-* The [sharp focus of a radially polarized light beam](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.91.233901).
-
-The code for each of these optical setups is provided in the Jupyter notebook of `examples.ipynb`.
-
-# 🚀 Testing XLuminA's efficiency:
-
-We evaluated our framework by conducting several tests: 
-
- (1) we compare the running times of the different propagation methods with [Diffractio](https://pypi.org/project/diffractio/) - see [Table 1](https://arxiv.org/abs/2310.08408#).
-
-<img src="miscellaneous/propagation_comparison.png" alt="propagation" width="500"/>
-
- (2) we compare the convergence times of SciPy's [BFGS optimizer](https://docs.scipy.org/doc/scipy/reference/optimize.minimize-bfgs.html#optimize-minimize-bfgs) *vs* JAX's ADAM optimizer when optimizing using XLuminA's optical simulator.
- 
-<img src="miscellaneous/performance.png" alt="performance" width="500"/>
-
-The Jupyter notebook used for running these simulations is provided as `test_diffractio_vs_xlumina.ipynb`. 
-
-# 🤖🔎 Discovery of new optical setups: 
-
-With XLuminA we were able to re-discover three foundational optics experiments: 
-
-➤ Optical telescope (or 4f-correlator),
-
-➤ Polarization-based beam shaping as used in [STED (stimulated emission depletion) microscopy](https://opg.optica.org/ol/fulltext.cfm?uri=ol-19-11-780&id=12352), 
-
-➤ The [sharp focus of a radially polarized light beam](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.91.233901).
-
-The Python files used for the discovery of these optical setups, as detailed in [our paper](https://arxiv.org/abs/2310.08408#), are organized in pairs of `optical_table` and `optimizer` as follows:
-
-| **Experiment name** | 🔬 Optical table | 🤖 Optimizer | 📄 File for data |
-|----------------|---------------|-----------|----------|
-| ***Optical telescope*** | `four_f_optical_table.py` | `four_f_optimizer.py`| `Generate_synthetic_data.py` |
-| ***Polarization-based STED*** | `vsted_optical_table.py` | `vsted_optimizer.py`| N/A |
-| ***Sharp focus*** | `sharp_focus_optical_table.py` | `sharp_focus_optimizer.py`| N/A |
-
-★ The large-scale setup functions are defined in `xl_optical_table.py` and `xl_optimizer.py`. 
 
 # 💻 Development:
 
@@ -196,7 +198,6 @@ The Python files used for the discovery of these optical setups, as detailed in 
 To run XLuminA you first need to install [**JAX**](https://jax.readthedocs.io/en/latest/index.html) - The version of JAX used in this project is v0.4.13;
 
 and [**Optax**](https://github.com/google-deepmind/optax/tree/master) - The version of Optax used in this project is v0.1.7.
-
 
 *To run the comparison test of the propagation functions, you need to install [**Diffractio**](https://https://pypi.org/project/diffractio/) - The version of Diffractio used in this project is v0.1.1.*
 
