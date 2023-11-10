@@ -67,11 +67,11 @@ The Python files used for the discovery of these optical setups, as detailed in 
 
 | **Experiment name** | 🔬 Optical table | 🤖 Optimizer | 📄 File for data |
 |----------------|---------------|-----------|----------|
-| ***Optical telescope*** | `four_f_optical_table.py` | `four_f_optimizer.py`| `Generate_synthetic_data.py` |
-| ***Polarization-based STED*** | `vsted_optical_table.py` | `vsted_optimizer.py`| N/A |
-| ***Sharp focus*** | `sharp_focus_optical_table.py` | `sharp_focus_optimizer.py`| N/A |
+| ***Optical telescope*** | [four_f_optical_table.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/four_f_optical_table.py) | [four_f_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/four_f_optimizer.py)| [Generate_synthetic_data.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/generate_synthetic_data.py) |
+| ***Polarization-based STED*** | [vsted_optical_table.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/vsted_optical_table.py) | [vsted_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/vsted_optimizer.py)| N/A |
+| ***Sharp focus*** | [sharp_focus_optical_table.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/sharp_focus_optical_table.py) | [sharp_focus_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/sharp_focus_optimizer.py)| N/A |
 
-★ The large-scale setup functions are defined in `xl_optical_table.py` and `xl_optimizer.py`. 
+★ The large-scale setup functions are defined in [xl_optical_table.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/xl_optical_table.py) and [xl_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/xl_optimizer.py). 
 
 
 # 👀 Overview:
