@@ -78,7 +78,7 @@ The Python files used for the discovery of these optical setups, as detailed in 
 
 In this section we list the available functions in different files and a brief description:
 
-1. In `wave_optics.py`: module for scalar optical fields.
+1. In [wave_optics.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/wave_optics.py): module for scalar optical fields.
    
    |*Class*|*Functions*|*Description*|
    |---------------|----|-----------|   
@@ -96,7 +96,7 @@ In this section we list the available functions in different files and a brief d
    |  | `.plane_wave` | Plane wave. |
 
      
-2. In `vectorized_optics.py`: module for vectorized optical fields.
+2. In [vectorized_optics.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/vectorized_optics.py): module for vectorized optical fields.
 
    |*Class*| *Functions* |*Description*|  
    |---------------|----|-----------|
@@ -111,7 +111,7 @@ In this section we list the available functions in different files and a brief d
    |  | `.plane_wave` | Plane wave. |
 
 
- 3. In `optical_elements.py`: shelf with all the optical elements available.
+ 3. In [optical_elements.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/optical_elements.py): shelf with all the optical elements available.
    
     | *Function* |*Description*|  
     |---------------|----|
@@ -144,7 +144,7 @@ In this section we list the available functions in different files and a brief d
     | `sharp_focus` | Optical table with the sharp focus of a radially polarized light beam setup in *Fig.5a* of [our paper](https://arxiv.org/abs/2310.08408#) .|
     
 
-4. In `toolbox.py`: file with useful functions. 
+4. In [toolbox.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/toolbox.py): file with useful functions. 
 
    | *Function* |*Description*|  
    |---------------|----|
@@ -161,7 +161,7 @@ In this section we list the available functions in different files and a brief d
    | `spot_size` | Computes the spot size as  $\pi (FWHM_x \cdot FWHM_y) /\lambda^2$. |
    | `compute_fwhm` | Computes FHWM in 2D. |
    
-5. In `loss_functions.py`: file with loss functions.
+5. In [loss_functions.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/loss_functions.py): file with loss functions.
 
    | *Function* |*Description*|  
    |---------------|----|
