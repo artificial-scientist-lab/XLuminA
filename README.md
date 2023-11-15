@@ -139,9 +139,10 @@ In this section we list the available functions in different files and a brief d
     | `forked_grating` | Forked grating of variable size, orientation, and topological charge. |
     | ***Pre-built optical setups*** | - | 
     | `building_block` | Basic building unit. Consists of a `sSLM`, and `LCD` linked via `VRS_propagation`. |
-    | `xl_setup` | Optical table with the general set-up in *Fig.7a* of [our paper](https://arxiv.org/abs/2310.08408#).|
-    | `vSTED` | Optical table with the vectorial-based STED setup in *Fig.4a* of [our paper](https://arxiv.org/abs/2310.08408#) .|
-    | `sharp_focus` | Optical table with the sharp focus of a radially polarized light beam setup in *Fig.5a* of [our paper](https://arxiv.org/abs/2310.08408#) .|
+    | `xl_setup` | Optical table with the general set-up (*Fig.7a* of [our paper](https://arxiv.org/abs/2310.08408#)).|
+    | `vSTED` | Optical table with the vectorial-based STED setup (*Fig.4a* of [our paper](https://arxiv.org/abs/2310.08408#)).|
+    | `sharp_focus` | Optical table with the sharp focus of a radially polarized light beam setup (*Fig.5a* of [our paper](https://arxiv.org/abs/2310.08408#)).|
+    | `general_setup` | Optical table with the general setup for large-scale discovery (*Fig.6a* of [our paper](https://arxiv.org/abs/2310.08408#)).|
     
 
 4. In [toolbox.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/toolbox.py): file with useful functions. 
