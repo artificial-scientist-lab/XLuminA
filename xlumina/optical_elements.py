@@ -46,6 +46,7 @@ config.update("jax_enable_x64", True)
         - xl_setup
         - vSTED
         - sharp_focus
+        - general_setup
 """
 
 # ------------------------------------------------------------------------------------------------
@@ -773,3 +774,167 @@ def sharp_focus(input_field, parameters, fixed_params):
     focused_light = VCZT_objective_lens(propagated_2, r=fixed_params[0], f=fixed_params[1], xout=fixed_params[2], yout=fixed_params[3])
     
     return focused_light
+
+def XL_Setup(ls1, ls2, ls3, z, phase, angle, r, f, xout, yout):
+    """
+    Optical table with the general set-up in Fig. 6a (https://arxiv.org/abs/2310.08408#):  
+    Building blocks consist of [sSLM -- z --> LCD], joint by z and beam splitters (BS). 
+    
+    Parameters:
+    ls1, ls2, ls3 (VectorizedLight objects): Light sources.
+    z (float): Distance to propagate.
+    phase (jnp.array): Array with phase masks for sSLM.
+    angle (float): Angle for LCDs.
+    r (float): Radius of the objective lens.
+    f (float): Focal length of the objective lens.
+    xout, yout (jnp.arrays): Size of the detection window. 
+    
+    Returns VectorizedLight objects at 6 detectors. 
+    
+    -------------------------------------------------------------------
+    
+    * Scheme of the setup (distance z, phase masks, angles, and objective lens specs are common - this setup is for testing, not optimizing):
+    
+
+                             ls1                     ls2                     ls3
+                              |                       |                       |
+                            [BB 2]                  [BB 4]                 [BB 6]
+                              |                       |                       |
+                              z                       z                       z             
+                              |                       |                       |
+                              v                       v                       v    
+    ls1 --> [BB 1] -- z --> [BS] --> [BB 7] -- z --> [BS] --> [BB 8] -- z -> [BS] --> OL --> Detector
+                              |                       |                       |
+                              z                       z                       z             
+                              |                       |                       |
+                              v                       v                       v    
+                           [BB 13]                 [BB 15]                 [BB 17]
+                              |                       |                       |
+                              z                       z                       z             
+                              |                       |                       |
+                              v                       v                       v    
+    ls2 --> [BB 3] -- z --> [BS] --> [BB 9] -- z --> [BS] --> [BB 10] - z -> [BS] --> OL --> Detector
+                              |                       |                       |
+                              z                       z                       z             
+                              |                       |                       |
+                              v                       v                       v    
+                           [BB 14]                 [BB 16]                 [BB 18]
+                              |                       |                       |
+                              z                       z                       z             
+                              |                       |                       |
+                              v                       v                       v  
+    ls3 --> [BB 5] -- z --> [BS] --> [BB 11] -- z -> [BS] -> [BB 12] -- z -> [BS] --> OL --> Detector
+                              |                       |                       |
+                              z                       z                       z             
+                              |                       |                       |
+                              v                       v                       v    
+                              OL                      OL                      OL
+                              |                       |                       |
+                              v                       v                       v    
+                           Detector                Detector                Detector
+    """
+    tic = time.perf_counter()
+    # Define empty object for single-input BS.
+    empty = VectorizedLight(ls1.x, ls1.y, ls1.wavelength)
+    
+    # Apply initial building blocks:
+    path_ls1_1, _ = (building_block(ls1, phase, phase, z, angle, angle)).VRS_propagation(z)
+    path_ls1_2, _ = (building_block(ls1, phase, phase, z, angle, angle)).VRS_propagation(z)
+
+    path_ls2_1, _ = (building_block(ls2, phase, phase, z, angle, angle)).VRS_propagation(z)
+    path_ls2_2, _ = (building_block(ls2, phase, phase, z, angle, angle)).VRS_propagation(z)
+
+    path_ls3_1, _ = (building_block(ls3, phase, phase, z, angle, angle)).VRS_propagation(z)
+    path_ls3_2, _ = (building_block(ls3, phase, phase, z, angle, angle)).VRS_propagation(z)
+
+    # Compute the first row
+    ls1_ref, ls1_tra = BS(path_ls1_2, path_ls1_1, 0.5, 0.5, jnp.pi)
+    path_ls1_3, _ = (building_block(ls1_tra, phase, phase, z, angle, angle)).VRS_propagation(z)
+    path_ls1_3_ref, path_ls1_3_tra = BS(empty, path_ls1_3, 0.5,0.5, jnp.pi)
+    path_ls1_4, _ = (building_block(path_ls1_3_tra, phase, phase, z, angle, angle)).VRS_propagation(z)
+    path_ls1_4_ref, path_ls1_4_tra = BS(empty, path_ls1_4, 0.5,0.5, jnp.pi)                 
+    ls1_f1 = VCZT_objective_lens(path_ls1_4_tra, r=r, f=f, xout=xout, yout=yout)
+
+    path_ls2_2_ref, path_ls2_2_tra = BS(path_ls2_2, empty, 0.5, 0.5, jnp.pi)                 
+    path_ls2_3, _ = (building_block(path_ls2_2_ref, phase, phase, z, angle, angle)).VRS_propagation(z)
+    path_ls2_3_ref, path_ls2_3_tra = BS(empty, path_ls2_3, 0.5,0.5, jnp.pi)
+    ls2_f1 = VCZT_objective_lens(path_ls2_3_tra, r=r, f=f, xout=xout, yout=yout)  
+
+    path_ls3_2_ref, path_ls3_2_tra = BS(path_ls3_2, empty, 0.5, 0.5, jnp.pi)                     
+    ls3_f1 = VCZT_objective_lens(path_ls3_2_ref, r=r, f=f, xout=xout, yout=yout)  
+
+    # Compute 2nd row
+    path_ls1_5, _ = (building_block(ls1_ref, phase, phase, z, angle, angle)).VRS_propagation(z)
+    path_ls1_6, _ = (building_block(path_ls1_3_ref, phase, phase, z, angle, angle)).VRS_propagation(z)
+    path_ls1_7, _ = (building_block(path_ls1_4_ref, phase, phase, z, angle, angle)).VRS_propagation(z)
+
+    path_ls2_4, _ = (building_block(path_ls2_2_tra, phase, phase, z, angle, angle)).VRS_propagation(z)
+    path_ls2_5, _ = (building_block(path_ls2_3_ref, phase, phase, z, angle, angle)).VRS_propagation(z)  
+    path_ls3_3, _ = (building_block(path_ls3_2_tra, phase, phase, z, angle, angle)).VRS_propagation(z)   
+
+    # Compute 3rd row
+    path_ls1_3_ref, path_ls1_3_tra = BS(path_ls1_3, empty, 0.5,0.5, jnp.pi)
+    path_ls1_8, _ = (building_block(path_ls1_3_ref, phase, phase, z, angle, angle)).VRS_propagation(z)
+    path_ls1_8_ref, path_ls1_8_tra = BS(path_ls1_6, path_ls1_8, 0.5,0.5, jnp.pi)
+    path_ls1_9, _ = (building_block(path_ls1_8_tra, phase, phase, z, angle, angle)).VRS_propagation(z)
+    path_ls1_9_ref, path_ls1_9_tra = BS(path_ls1_7, path_ls1_9, 0.5,0.5, jnp.pi)                 
+    ls1_f2 = VCZT_objective_lens(path_ls1_9_tra, r=r, f=f, xout=xout, yout=yout)  
+
+    path_ls2_1_ref, path_ls2_1_tra = BS(path_ls2_1, empty, 0.5,0.5, jnp.pi)
+    path_ls2_6, _ = (building_block(path_ls2_1_tra, phase, phase, z, angle, angle)).VRS_propagation(z)
+    path_ls2_6_ref, path_ls2_6_tra = BS(path_ls2_4, path_ls2_6, 0.5,0.5, jnp.pi)
+    path_ls2_7, _ = (building_block(path_ls2_6_tra, phase, phase, z, angle, angle)).VRS_propagation(z)
+    path_ls2_7_ref, path_ls2_7_tra = BS(path_ls2_5, path_ls2_7,0.5,0.5, jnp.pi)
+    ls2_f2 = VCZT_objective_lens(path_ls2_7_tra, r=r, f=f, xout=xout, yout=yout)  
+
+    path_ls3_3_ref, path_ls3_3_tra = BS(path_ls3_2_tra, empty, 0.5,0.5, jnp.pi)                 
+    ls3_f2 = VCZT_objective_lens(path_ls3_3_ref, r=r, f=f, xout=xout, yout=yout)  
+
+    # Compute 4th row
+    path_ls1_10, _ = (building_block(path_ls1_3_tra, phase, phase, z, angle, angle)).VRS_propagation(z)
+    path_ls2_8, _ = (building_block(path_ls2_1_ref, phase, phase, z, angle, angle)).VRS_propagation(z)
+
+    path_ls1_11, _ = (building_block(path_ls1_8_ref, phase, phase, z, angle, angle)).VRS_propagation(z)
+    path_ls2_9, _ = (building_block(path_ls2_6_ref, phase, phase, z, angle, angle)).VRS_propagation(z)
+
+    path_ls1_12, _ = (building_block(path_ls1_9_ref, phase, phase, z, angle, angle)).VRS_propagation(z)      
+    path_ls2_10, _ = (building_block(path_ls2_7_ref, phase, phase, z, angle, angle)).VRS_propagation(z)  
+    path_ls3_4, _ = (building_block(path_ls3_3_tra, phase, phase, z, angle, angle)).VRS_propagation(z)   
+
+    # Compute 5th row       
+    path_ls1_10_ref, path_ls1_10_tra = BS(path_ls1_10, empty, 0.5,0.5, jnp.pi)  
+    path_ls1_13, _ = (building_block(path_ls1_10_ref, phase, phase, z, angle, angle)).VRS_propagation(z)
+    path_ls1_13_ref, path_ls1_13_tra = BS(path_ls1_11, path_ls1_13,0.5,0.5, jnp.pi)                 
+    path_ls1_14, _ = (building_block(path_ls1_13_tra, phase, phase, z, angle, angle)).VRS_propagation(z)
+    path_ls1_14_ref, path_ls1_14_tra = BS(path_ls1_12, path_ls1_14,0.5,0.5, jnp.pi)                    
+    ls1_f3 = VCZT_objective_lens(path_ls1_14_tra, r=r, f=f, xout=xout, yout=yout)  
+
+    path_ls2_8_ref, path_ls2_8_tra = BS(path_ls2_8, empty, 0.5,0.5, jnp.pi)  
+    path_ls2_11, _ = (building_block(path_ls2_8_ref, phase, phase, z, angle, angle)).VRS_propagation(z)
+    path_ls2_11_ref, path_ls2_11_tra = BS(path_ls2_9, path_ls2_11,0.5,0.5, jnp.pi)                  
+    path_ls2_12, _ = (building_block(path_ls2_11_tra, phase, phase, z, angle, angle)).VRS_propagation(z)
+    path_ls2_12_ref, path_ls2_12_tra = BS(path_ls2_10, path_ls2_12,0.5,0.5, jnp.pi)     
+    ls2_f3 = VCZT_objective_lens(path_ls2_12_tra, r=r, f=f, xout=xout, yout=yout)  
+
+    path_ls3_1_ref, path_ls3_1_tra = BS(empty, path_ls3_1, 0.5,0.5, jnp.pi)  
+    path_ls3_5, _ = (building_block(path_ls3_1_tra, phase, phase, z, angle, angle)).VRS_propagation(z)
+    path_ls3_5_ref, path_ls3_5_tra = BS(empty, path_ls3_5, 0.5,0.5, jnp.pi)                  
+    path_ls3_6, _ = (building_block(path_ls3_5_tra, phase, phase, z, angle, angle)).VRS_propagation(z)
+    path_ls3_6_ref, path_ls3_6_tra = BS(path_ls3_4, path_ls3_6,0.5,0.5, jnp.pi)  
+    ls3_f3 = VCZT_objective_lens(path_ls3_6_tra, r=r, f=f, xout=xout, yout=yout)              
+
+    # Compute 6th row
+    ls1_f4 = VCZT_objective_lens(path_ls1_10_tra, r=r, f=f, xout=xout, yout=yout)  
+    ls2_f4 = VCZT_objective_lens(path_ls2_8_tra, r=r, f=f, xout=xout, yout=yout)  
+    ls3_f4 = VCZT_objective_lens(path_ls3_1_ref, r=r, f=f, xout=xout, yout=yout)
+    
+    ls1_f5 = VCZT_objective_lens(path_ls1_13_ref, r=r, f=f, xout=xout, yout=yout)  
+    ls2_f5 = VCZT_objective_lens(path_ls2_11_ref, r=r, f=f, xout=xout, yout=yout)  
+    ls3_f5 = VCZT_objective_lens(path_ls3_5_ref, r=r, f=f, xout=xout, yout=yout)
+    
+    ls1_f6 = VCZT_objective_lens(path_ls1_14_ref, r=r, f=f, xout=xout, yout=yout)  
+    ls2_f6 = VCZT_objective_lens(path_ls2_12_ref, r=r, f=f, xout=xout, yout=yout)  
+    ls3_f6 = VCZT_objective_lens(path_ls3_6_ref, r=r, f=f, xout=xout, yout=yout) 
+    print("Time taken for generate XL experiment - in seconds", time.perf_counter() - tic)
+    
+    return ls1_f1, ls1_f2, ls1_f3, ls1_f4, ls1_f5, ls1_f6, ls2_f1, ls2_f2, ls2_f3, ls2_f4, ls2_f5, ls2_f6, ls3_f1, ls3_f2, ls3_f3, ls3_f4, ls3_f5, ls3_f6
