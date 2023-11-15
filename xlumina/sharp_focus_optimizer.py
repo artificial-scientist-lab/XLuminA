@@ -21,13 +21,29 @@ loss_function = jit(loss_sharp_focus)
 
 # ----------------------------------------------------
 
-def fit(params: optax.Params, optimizer: optax.GradientTransformation, num_iterations) -> optax.Params:
+def fit(params: optax.Params, optimizer: optax.GradientTransformation, num_iterations):
+    """
+    Optimizer function: defines the update and runs the optimizer loop. 
     
+    Parameters:
+        params (optax.Params): initial set of parameters.
+        optimizer (optax.GradientTransformation): type of optimizer to use.
+        num_iterations (int): total number of iterations to perform.
+        
+    Returns:
+        best_params (optax.Params): set of best parameters.
+        best_loss (float): best loss achieved.
+        iteration_steps (list): list of performed iterations.
+        loss_list (list): list of loss values.
+    """
+    # Init the optimizer
     opt_state = optimizer.init(params)
     
     @jit
     def update(params, opt_state):
-        # Define single update step:
+        """
+        Define single update step
+        """
         # JIT the loss and compute 
         loss_value, grads = jax.value_and_grad(loss_function)(params)
         # Update the state of the optimizer
