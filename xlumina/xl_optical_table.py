@@ -17,7 +17,7 @@ wavelength_ls2 = .530*um
 x_total = 2500*um
 x, y = space(x_total, sensor_lateral_size)
 
-# 2. Define the optical functions: two orthogonally linearly polarized gaussian beams.
+# 2. Define the optical functions: two linearly polarized gaussian beams.
 w0 = (1200*um, 1200*um) 
 ls1 = PolarizedLightSource(x, y, wavelength_ls1)
 ls1.gaussian_beam(w0=w0, jones_vector=(1, 1))
