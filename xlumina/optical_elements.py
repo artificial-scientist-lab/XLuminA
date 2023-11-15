@@ -252,49 +252,57 @@ def linear_polarizer(input_field, alpha):
     
     return light_out
 
-def BS(input_a, input_b, R, T):
+def BS(a1, a2, R, T, phase):
     """
-    Double input dielectric beam splitter of reflectance R, and transmittance T. 
-    Adds a pi phase on reflected input_a.  
+    Lossless two-mode beam splitter of reflectance R, and transmittance T. 
+    
+    If: 
+        phase = 0 -> light in port b1
+        phase = pi -> light in port b2
+        phase = pi/2 -> light in ports b1, b2
     
     Scheme:
-               input_b
+                 a1
                  |
-                 v (+0)           
-    input_a --> [\] --> out_d = a_transmitted + b_reflected
-            (+pi)| 
+                 v        
+         a2 --> [\] --> b2 = a2_t + a1_r
+                 | 
                  v
-                out_c = a_reflected + b_transmitted
-            
+                 b1 = a1_t + a2_r
+   
     ------------------------------------------------------------ 
-    E_out_c = [[√R * e^(i*pi) * Ex_input_a + √T * Ex_input_b],
-               [√R * e^(i*pi) * Ey_input_a + √T * Ey_input_b]] 
+    
+    BS = [[     √T          e^(i*phase)*√R],
+          [-e^(-i*phase)√R        √T      ]]
+    
+    b1 = [[√T * Ex_a1 + √R * e^(i*phase) * Ex_a2],
+          [√T * Ey_a1 + √R * e^(i*phase) * Ey_a2]] 
                
-    E_out_d = [[√T * Ex_input_a + √R * Ex_input_b],
-               [√T * Ey_input_a + √R * Ey_input_b]]          
+    b2 = [[- √R * e^(-i*phase) * Ex_a1 + √T * Ex_a2],
+          [- √R * e^(-i*phase) * Ey_a1 + √T * Ey_a2]]          
+    
     ------------------------------------------------------------          
     
     Parameters: 
-        input_a (VectorizedLight)
-        input_b (VectorizedLight)
+        a1 (VectorizedLight): electric field in port a1
+        a2 (VectorizedLight): electric field in port a2
         R (float): Reflectance (between 0 and 1)
         T (float): Transmittance (between 0 and 1)
+        phase (float): phase shift to apply.
     
-    * Must fulfill R + T = 1
-    
-    Returns out_c and out_d (VectorizedLight). 
+    Returns b1 and b2 (VectorizedLight). 
     """
-    # Define light at ports c and d.
-    out_c = VectorizedLight(input_a.x, input_a.y, input_a.wavelength)
-    out_d = VectorizedLight(input_a.x, input_a.y, input_a.wavelength)
+    # Define light at ports b1 and b2.
+    b1 = VectorizedLight(a1.x, a1.y, a1.wavelength)
+    b2 = VectorizedLight(a1.x, a1.y, a1.wavelength)
     
-    out_c.Ex = (jnp.sqrt(R) * jnp.exp(1j*jnp.pi) * input_a.Ex) + (jnp.sqrt(T) * input_b.Ex)
-    out_c.Ey = (jnp.sqrt(R) * jnp.exp(1j*jnp.pi) * input_a.Ey) + (jnp.sqrt(T) * input_b.Ey)
+    b1.Ex = (jnp.sqrt(T) * a1.Ex) + (jnp.sqrt(R) * jnp.exp(1j*phase) * a2.Ex) 
+    b1.Ey = (jnp.sqrt(T) * a1.Ey) + (jnp.sqrt(R) * jnp.exp(1j*phase) * a2.Ey)
     
-    out_d.Ex = (jnp.sqrt(T) * input_a.Ex) + (jnp.sqrt(R) * input_b.Ex)
-    out_d.Ey = (jnp.sqrt(T) * input_a.Ey) + (jnp.sqrt(R) * input_b.Ey)
+    b2.Ex = (- jnp.sqrt(R) * jnp.exp(- 1j*phase) * a1.Ex) + (jnp.sqrt(T) * a2.Ex)
+    b2.Ey = (- jnp.sqrt(R) * jnp.exp(- 1j*phase) * a1.Ey) + (jnp.sqrt(T) * a2.Ey) 
     
-    return out_c, out_d
+    return b1, b2
 
 
 def high_NA_objective_lens(input_field, radius, f):
@@ -656,13 +664,13 @@ def xl_setup(ls1, ls2, parameters, fixed_params):
     light_path_a, _ = (building_block(ls1, parameters[0]* 2*jnp.pi - jnp.pi, parameters[1]* 2*jnp.pi - jnp.pi, (jnp.abs(parameters[2]) * 100 + offset)*cm, parameters[3]* 2*jnp.pi - jnp.pi, parameters[4]* 2*jnp.pi - jnp.pi)).VRS_propagation((jnp.abs(parameters[20]) * 100 + offset)*cm)
     light_path_b, _ = (building_block(ls1, parameters[5]* 2*jnp.pi - jnp.pi, parameters[6]* 2*jnp.pi - jnp.pi, (jnp.abs(parameters[7]) * 100 + offset)*cm, parameters[8]* 2*jnp.pi - jnp.pi, parameters[9]* 2*jnp.pi - jnp.pi)).VRS_propagation((jnp.abs(parameters[21]) * 100 + offset)*cm)
         # Join the building blocks of equal wavelength with BS: 
-    ab_reflected, ab_transmitted = BS(light_path_a, light_path_b, 0.5, 0.5)
+    ab_reflected, ab_transmitted = BS(light_path_b, light_path_a, 0.5, 0.5, jnp.pi)
     
     # Wavelength 2
     light_path_c, _ = (building_block(ls2, parameters[10]* 2*jnp.pi - jnp.pi, parameters[11]* 2*jnp.pi - jnp.pi, (jnp.abs(parameters[12]) * 100 + offset)*cm, parameters[13]* 2*jnp.pi - jnp.pi, parameters[14]* 2*jnp.pi - jnp.pi)).VRS_propagation((jnp.abs(parameters[22]) * 100 + offset)*cm)
     light_path_d, _ = (building_block(ls2, parameters[15]* 2*jnp.pi - jnp.pi, parameters[16]* 2*jnp.pi - jnp.pi, (jnp.abs(parameters[17]) * 100 + offset)*cm, parameters[18]* 2*jnp.pi - jnp.pi, parameters[19]* 2*jnp.pi - jnp.pi)).VRS_propagation((jnp.abs(parameters[23]) * 100 + offset)*cm)
         # Join the building blocks of equal wavelength with BS: 
-    cd_reflected, cd_transmitted = BS(light_path_c, light_path_d, 0.5, 0.5)
+    cd_reflected, cd_transmitted = BS(light_path_d, light_path_c, 0.5, 0.5, jnp.pi)
     
     # Propagate to focal plane and extract the intensity
     ls1_f = VCZT_objective_lens(ab_reflected, r=fixed_params[0], f=fixed_params[1], xout=fixed_params[2], yout=fixed_params[3])
@@ -683,13 +691,13 @@ def vSTED(excitation_beam, depletion_beam, parameters, fixed_params):
     [Ref] D. Wildanger, E. Rittweger, L. Kastrup, and S. W. Hell, Opt. Express 16, 9614-9621 (2008).
     
     Scheme: 
-    STED beam ---> Modulate: sSLM (phase mask) --> VRS(z) --> LCD --> High NA lens 
-    Excitation beam ----------------------------------------> LCD --> High NA lens 
+    STED beam ---> Modulate: sSLM (phase mask) --> VRS(z) --> High NA lens 
+    Excitation beam ----------------------------------------> High NA lens 
               
     Parameters:
         excitation_beam (object): input field for the excitation.
         depletion_beam (object): input field for the depletion.
-        parameters (jnp.array): parameters to pass to the optimizer [phase 1, phase 2] for sSLM.
+        parameters (jnp.array): parameters to pass to the optimizer [phase 1] for sSLM.
         fixed_params (jnp.array): parameters to maintain fixed during optimization [r, f, xout and yout]; that is radius and focal length of the objective lens.
            
     Returns:
