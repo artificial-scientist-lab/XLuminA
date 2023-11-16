@@ -209,8 +209,8 @@ class ScalarLight:
         # Check sampling 
         range_x = self.x[-1] - self.x[0]
         range_y = self.y[-1] - self.y[0]
-        num_x = len(self.x)
-        num_y = len(self.y)
+        num_x = jnp.size(self.x)
+        num_y = jnp.size(self.y)
 
         dx = range_x / num_x
         dy = range_y / num_y
@@ -267,8 +267,8 @@ def build_grid(x, y):
     dx = x[1] - x[0]
     dy = y[1] - y[0]
     # Build 2N-1 x 2N-1 (X, Y) space:
-    x_padded = jnp.pad((x[0] - x[::-1]), (0, len(x) - 1), 'reflect')
-    y_padded = jnp.pad((y[0] - y[::-1]), (0, len(y) - 1), 'reflect')
+    x_padded = jnp.pad((x[0] - x[::-1]), (0, jnp.size(x) - 1), 'reflect')
+    y_padded = jnp.pad((y[0] - y[::-1]), (0, jnp.size(y) - 1), 'reflect')
     # Convert the right half into positive values:
     I = jnp.ones((1, int(len(x_padded) / 2) + 1))
     II = -jnp.ones((1, int(len(x_padded) / 2)))
