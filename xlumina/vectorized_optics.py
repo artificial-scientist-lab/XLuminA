@@ -257,13 +257,13 @@ class VectorizedLight:
         Ez = jnp.array(self.Ex * self.X / r + self.Ey * self.Y / r)
         nx, ny, dx, dy, Xext, Yext = build_grid(self.x, self.y)
         
-        # # Quality factor for accurate simulation [Eq. 22 in Ref1]:
-        # dr_real = jnp.sqrt(dx**2 + dy**2)
-        # # Rho
-        # rmax = jnp.sqrt(jnp.max(self.x**2) + jnp.max(self.y**2))
-        # # Delta rho ideal
-        # dr_ideal = jnp.sqrt((self.wavelength)**2 + rmax**2 + 2 * (self.wavelength) * jnp.sqrt(rmax**2 + z**2)) - rmax
-        # quality_factor = dr_ideal / dr_real
+        # Quality factor for accurate simulation [Eq. 22 in Ref1]:
+        dr_real = jnp.sqrt(dx**2 + dy**2)
+        # Rho
+        rmax = jnp.sqrt(jnp.max(self.x**2) + jnp.max(self.y**2))
+        # Delta rho ideal
+        dr_ideal = jnp.sqrt((self.wavelength)**2 + rmax**2 + 2 * (self.wavelength) * jnp.sqrt(rmax**2 + z**2)) - rmax
+        quality_factor = dr_ideal / dr_real
         
         # Stack the input field in a (3, N, N) shape and pass to jit.
         E_in = jnp.stack([self.Ex, self.Ey, Ez], axis=0)
@@ -277,7 +277,7 @@ class VectorizedLight:
         light_out.Ez = E_out[:, :, 2]
 
         print("Time taken to perform one VRS propagation (in seconds):", time.perf_counter() - tic)
-        return light_out#, quality_factor
+        return light_out, quality_factor
     
     def get_VRS_minimum_z(self, n=1, quality_factor=1):
         """
