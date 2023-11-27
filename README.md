@@ -47,9 +47,13 @@ We evaluated our framework by conducting several tests:
 
 <img src="miscellaneous/propagation_comparison.png" alt="propagation" width="500"/>
 
- (2) we compare the convergence times of SciPy's [BFGS optimizer](https://docs.scipy.org/doc/scipy/reference/optimize.minimize-bfgs.html#optimize-minimize-bfgs) *vs* JAX's ADAM optimizer when optimizing using XLuminA's optical simulator.
+ (2) we compare the gradient evaluation times of numerical (using SciPy's [BFGS optimizer](https://docs.scipy.org/doc/scipy/reference/optimize.minimize-bfgs.html#optimize-minimize-bfgs)) *vs* analytical differentiation (using JAX's [ADAM optimizer](https://jax.readthedocs.io/en/latest/jax.example_libraries.optimizers.html)) when optimizing using XLuminA's optical simulator...
  
 <img src="miscellaneous/performance.png" alt="performance" width="500"/>
+
+(3) and its convergence time:
+ 
+<img src="miscellaneous/performance_convergence.png" alt="performance" width="500"/>
 
 The Jupyter notebook used for running these simulations is provided as [test_diffractio_vs_xlumina.ipynb](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/test_diffractio_vs_xlumina.ipynb). 
 
