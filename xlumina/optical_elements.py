@@ -677,12 +677,14 @@ def xl_setup(ls1, ls2, parameters, fixed_params):
     ls1_f = VCZT_objective_lens(ab_reflected, r=fixed_params[0], f=fixed_params[1], xout=fixed_params[2], yout=fixed_params[3])
     ls2_f = VCZT_objective_lens(cd_transmitted, r=fixed_params[0], f=fixed_params[1], xout=fixed_params[2], yout=fixed_params[3])
     
-    # Ir intensity
-    i_ls1 = jnp.abs(ls1_f.Ex)**2 + jnp.abs(ls1_f.Ey)**2
-    i_ls2 = jnp.abs(ls2_f.Ex)**2 + jnp.abs(ls2_f.Ey)**2
+    # TOTAL (3D) intensity
+    i_ls1 = jnp.abs(ls1_f.Ex)**2 + jnp.abs(ls1_f.Ey)**2 + jnp.abs(ls1_f.Ez)**2
+    i_ls2 = jnp.abs(ls2_f.Ex)**2 + jnp.abs(ls2_f.Ey)**2 + jnp.abs(ls2_f.Ez)**2
     
-    # Resulting STED-like function:
-    i_eff = jnp.clip(i_ls2 - i_ls1, a_min=0, a_max=10e10)
+    # Resulting STED function computed for 3D:
+    beta = 1 # Efficiency in the depletion
+    
+    i_eff = i_ls2 * (1 - beta * (1- jnp.exp(-(i_ls1/i_ls2))))
 
     return i_eff, ls1_f, ls2_f
     
@@ -730,9 +732,12 @@ def vSTED(excitation_beam, depletion_beam, parameters, fixed_params):
     i_dep = jnp.abs(dep_f.Ex)**2 + jnp.abs(dep_f.Ey)**2
     
     # Resulting STED-like beam
-    i_eff = jnp.clip(i_ex - i_dep, a_min=0, a_max=10e10)
+    beta = 1 # Efficiency in the depletion
+    
+    i_eff = i_ex * (1 - beta * (1- jnp.exp(-(i_dep/i_ex)))) 
 
     return i_eff, i_ex, i_dep, ex_f, dep_f
+
 
 def sharp_focus(input_field, parameters, fixed_params):
     """
