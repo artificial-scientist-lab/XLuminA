@@ -41,9 +41,9 @@ The code for each of these optical setups is provided in the Jupyter notebook of
 
 # 🚀 Testing XLuminA's efficiency:
 
-We evaluated our framework by conducting several tests: 
+We evaluated our framework by conducting several tests - see [Figure 1](https://arxiv.org/abs/2310.08408#). The experiments were run on an Intel CPU Xeon Gold 6130 and Nvidia GPU Quadro RTX 6000. 
 
- (1) we compare the running times of the different propagation methods with [Diffractio](https://pypi.org/project/diffractio/) - see [Table 1](https://arxiv.org/abs/2310.08408#).
+ (1) Average execution time (in seconds) over 100 runs, within a computational window size of $2048\times 2048$, for scalar and vectorial field propagation using Rayleigh-Sommerfeld (RS, VRS) and Chirped z-transform (CZT, VCZT) in [Diffractio](https://pypi.org/project/diffractio/) and XLuminA. Times for XLuminA reflect the run with pre-compiled jitted functions.
 
 <img src="miscellaneous/propagation_comparison.png" alt="propagation" width="500"/>
 
@@ -143,10 +143,10 @@ In this section we list the available functions in different files and a brief d
     | `forked_grating` | Forked grating of variable size, orientation, and topological charge. |
     | ***Pre-built optical setups*** | - | 
     | `building_block` | Basic building unit. Consists of a `sSLM`, and `LCD` linked via `VRS_propagation`. |
-    | `xl_setup` | Optical table with the general set-up (*Fig.7a* of [our paper](https://arxiv.org/abs/2310.08408#)).|
-    | `vSTED` | Optical table with the vectorial-based STED setup (*Fig.4a* of [our paper](https://arxiv.org/abs/2310.08408#)).|
-    | `sharp_focus` | Optical table with the sharp focus of a radially polarized light beam setup (*Fig.5a* of [our paper](https://arxiv.org/abs/2310.08408#)).|
-    | `general_setup` | Optical table with the general setup for large-scale discovery (*Fig.6a* of [our paper](https://arxiv.org/abs/2310.08408#)).|
+    | `xl_setup` | Optical table with the large set-up (*Fig.6a* of [our paper](https://arxiv.org/abs/2310.08408#)).|
+    | `vSTED` | Optical table with the vectorial-based STED setup (*Fig.3a* of [our paper](https://arxiv.org/abs/2310.08408#)).|
+    | `sharp_focus` | Optical table with the sharp focus of a radially polarized light beam setup (*Fig.4a* of [our paper](https://arxiv.org/abs/2310.08408#)).|
+    | `general_setup` | Optical table with the general setup for large-scale discovery (*Fig.5a* of [our paper](https://arxiv.org/abs/2310.08408#)).|
     
 
 4. In [toolbox.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/toolbox.py): file with useful functions. 
