@@ -164,7 +164,7 @@ In this section we list the available functions in different files and a brief d
    | `rotate_mask` | Rotates the (X, Y) frame w.r.t. given point. |
    | `profile` | Determines the profile of a given input without using interpolation.|
    | `spot_size` | Computes the spot size as  $\pi (FWHM_x \cdot FWHM_y) /\lambda^2$. |
-   | `compute_fwhm` | Computes FHWM in 2D. |
+   | `compute_fwhm` | Computes FWHM in 2D. |
    
 5. In [loss_functions.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/loss_functions.py): file with loss functions.
 
