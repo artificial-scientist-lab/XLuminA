@@ -1,8 +1,18 @@
-from __init__ import um, nm, mm
-from vectorized_optics import *
-from optical_elements import sharp_focus
-from loss_functions import small_area
-from toolbox import space
+# Setting the path for XLuminA modules:
+import os
+import sys
+current_path = os.path.abspath(os.path.join('..'))
+dir_path = os.path.dirname(current_path)
+module_path = os.path.join(dir_path)
+if module_path not in sys.path:
+    sys.path.append(module_path)
+
+# Import modules
+from xlumina.__init__ import um, nm, mm
+from xlumina.vectorized_optics import *
+from xlumina.optical_elements import sharp_focus
+from xlumina.loss_functions import small_area
+from xlumina.toolbox import space
 from jax import vmap
 import jax.numpy as jnp
 

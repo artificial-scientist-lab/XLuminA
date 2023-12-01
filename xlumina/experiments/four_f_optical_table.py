@@ -1,8 +1,17 @@
-from __init__ import um, nm, cm
-from wave_optics import *
-from optical_elements import SLM
-from loss_functions import mean_batch_MSE_Intensity    
-from toolbox import space
+# Setting the path for XLuminA modules:
+import os
+import sys
+current_path = os.path.abspath(os.path.join('..'))
+dir_path = os.path.dirname(current_path)
+module_path = os.path.join(dir_path)
+if module_path not in sys.path:
+    sys.path.append(module_path)
+
+from xlumina.__init__ import um, nm, cm
+from xlumina.wave_optics import *
+from xlumina.optical_elements import SLM
+from xlumina.loss_functions import mean_batch_MSE_Intensity    
+from xlumina.toolbox import space
 from jax import vmap
 import jax.numpy as jnp
 

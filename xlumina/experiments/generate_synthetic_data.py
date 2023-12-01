@@ -1,8 +1,17 @@
+# Setting the path for XLuminA modules:
+import os
+import sys
+current_path = os.path.abspath(os.path.join('..'))
+dir_path = os.path.dirname(current_path)
+module_path = os.path.join(dir_path)
+if module_path not in sys.path:
+    sys.path.append(module_path)
+
 import numpy as np
 import jax.numpy as jnp
 from __init__ import um, nm, mm, degrees, radians
-from wave_optics import *
-from toolbox import space
+from xlumina.wave_optics import *
+from xlumina.toolbox import space
 
 """
 Synthetic data batches generation: 4f system with magnification 2x.
