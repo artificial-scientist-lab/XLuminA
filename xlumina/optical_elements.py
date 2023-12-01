@@ -2,10 +2,10 @@ import jax.numpy as jnp
 from jax import config, jit, vmap
 from functools import partial
 import time
-from __init__ import um, cm
-from wave_optics import ScalarLight
-from vectorized_optics import VectorizedLight, vectorized_CZT_for_high_NA
-from toolbox import build_LCD_cell, rotate_mask
+from .__init__ import um, cm
+from .wave_optics import ScalarLight
+from .vectorized_optics import VectorizedLight, vectorized_CZT_for_high_NA
+from .toolbox import build_LCD_cell, rotate_mask
 
 # Comment this line if float32 is enough precision for you. 
 config.update("jax_enable_x64", True)

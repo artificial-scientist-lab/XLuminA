@@ -1,6 +1,6 @@
 import jax.numpy as jnp
 from jax import jit, vmap, config
-from __init__ import um
+from .__init__ import um
 
 # Comment this line if float32 is enough precision for you. 
 config.update("jax_enable_x64", True)

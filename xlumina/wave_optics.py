@@ -5,7 +5,7 @@ from functools import partial
 import matplotlib.pyplot as plt
 import time
 
-from toolbox import rotate_mask
+from .toolbox import rotate_mask
 
 # Comment this line if float32 is enough precision for you. 
 config.update("jax_enable_x64", True)
