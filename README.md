@@ -13,9 +13,7 @@ XLuminA can be installed with
 pip install xlumina
 ```
 
-This will install install [**JAX and jaxlib**](https://jax.readthedocs.io/en/latest/index.html) (he version of JAX used in this project is v0.4.13), [**Optax**](https://github.com/google-deepmind/optax/tree/master) (the version of Optax used in this project is v0.1.7), and [**SciPy**](https://scipy.org) (the version of SciPy used in this project is v1.10.1).
-
-*If you want to run the comparison test of the propagation functions, you need to install [**Diffractio**](https://https://pypi.org/project/diffractio/) - The version of Diffractio used in this project is v0.1.1.*
+This will install [**JAX and jaxlib**](https://jax.readthedocs.io/en/latest/index.html) (he version of JAX used in this project is v0.4.13), [**Optax**](https://github.com/google-deepmind/optax/tree/master) (the version of Optax used in this project is v0.1.7), and [**SciPy**](https://scipy.org) (the version of SciPy used in this project is v1.10.1).
 
 ### GPU compatibility:
 
@@ -80,6 +78,8 @@ We evaluated our framework by conducting several tests - see [Figure 1](https://
 <img src="miscellaneous/performance_convergence.png" alt="performance" width="700"/>
 
 The Jupyter notebook used for running these simulations is provided as [test_diffractio_vs_xlumina.ipynb](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/test_diffractio_vs_xlumina.ipynb). 
+
+*If you want to run the comparison test of the propagation functions, you need to install [**Diffractio**](https://https://pypi.org/project/diffractio/) - The version of Diffractio used in this project is v0.1.1.*
 
 # 🤖🔎 Discovery of new optical setups: 
 
@@ -221,16 +221,6 @@ In this section we list the available functions in different files and a brief d
 # 💻 Development:
 
 *Some functionalities of XLuminA’s optics simulator (e.g., optical propagation algorithms, planar lens or amplitude masks) are inspired in an open-source NumPy-based Python module for diffraction and interferometry simulation, [Diffractio](https://pypi.org/project/diffractio/), although we have rewritten and modified these approaches to combine them with JAX just-in-time (jit) functionality. On top of that, we developed completely new functions (e.g., beam splitters, LCDs or propagation through high NA objective lens with CZT methods, to name a few) which significantly expand the software capabilities.*
-
-## Prerequisites:
-
-To run XLuminA you first need to install [**JAX**](https://jax.readthedocs.io/en/latest/index.html) - The version of JAX used in this project is v0.4.13;
-
-and [**Optax**](https://github.com/google-deepmind/optax/tree/master) - The version of Optax used in this project is v0.1.7.
-
-*To run the comparison test of the propagation functions, you need to install [**Diffractio**](https://https://pypi.org/project/diffractio/) - The version of Diffractio used in this project is v0.1.1.*
-
-*To run the comparison test of the optimizers, you need to install [**SciPy**](https://scipy.org) - The version of SciPy used in this project is v1.10.1.*
 
 ## Clone repository:
 
