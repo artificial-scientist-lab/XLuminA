@@ -5,6 +5,34 @@
 [**XLuminA: An Auto-differentiating Discovery Framework for Super-Resolution Microscopy**](https://arxiv.org/abs/2310.08408#)\
 *Carla Rodríguez, Sören Arlt, Leonhard Möckl and Mario Krenn*
 
+# 💻 Installation:
+
+XLuminA can be installed with
+
+```
+pip install xlumina
+```
+
+This will install install [**JAX**](https://jax.readthedocs.io/en/latest/index.html) and **jaxlib**  - The version of JAX used in this project is v0.4.13, 
+
+[**Optax**](https://github.com/google-deepmind/optax/tree/master) - The version of Optax used in this project is v0.1.7, 
+
+and [**SciPy**](https://scipy.org) - The version of SciPy used in this project is v1.10.1.
+
+*If you want to run the comparison test of the propagation functions, you need to install [**Diffractio**](https://https://pypi.org/project/diffractio/) - The version of Diffractio used in this project is v0.1.1.*
+
+## GPU compatibility:
+
+The package automatically installs the CPU version of JAX. To install [JAX with NVIDIA GPU support](https://jax.readthedocs.io/en/latest/index.html) (**Note: wheels only available on linux**), use:
+
+```
+# CUDA 12 installation
+pip install --upgrade "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+
+# CUDA 11 installation
+pip install --upgrade "jax[cuda11_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+```
+
 # 👾 Features:
 
 XLuminA allows for the simulation, in a (*very*) fast and efficient way, of classical light propagation through optics hardware configurations,and enables the optimization and automated discovery of new setup designs.
