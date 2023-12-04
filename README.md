@@ -59,7 +59,7 @@ Examples of some experiments that can be reproduced with XLuminA are:
 * Polarization-based beam shaping as used in [STED (stimulated emission depletion) microscopy](https://opg.optica.org/ol/fulltext.cfm?uri=ol-19-11-780&id=12352), 
 * The [sharp focus of a radially polarized light beam](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.91.233901).
 
-The code for each of these optical setups is provided in the Jupyter notebook of [examples.ipynb](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/examples.ipynb).
+The code for each of these optical setups is provided in the Jupyter notebook of [examples.ipynb](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/examples/examples.ipynb).
 
 # 🚀 Testing XLuminA's efficiency:
 
@@ -77,7 +77,7 @@ We evaluated our framework by conducting several tests - see [Figure 1](https://
  
 <img src="miscellaneous/performance_convergence.png" alt="performance" width="700"/>
 
-The Jupyter notebook used for running these simulations is provided as [test_diffractio_vs_xlumina.ipynb](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/test_diffractio_vs_xlumina.ipynb). 
+The Jupyter notebook used for running these simulations is provided as [test_diffractio_vs_xlumina.ipynb](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/examples/test_diffractio_vs_xlumina.ipynb). 
 
 *If you want to run the comparison test of the propagation functions, you need to install [**Diffractio**](https://https://pypi.org/project/diffractio/) - The version of Diffractio used in this project is v0.1.1.*
 
