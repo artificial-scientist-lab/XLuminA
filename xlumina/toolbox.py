@@ -22,6 +22,11 @@ Contains useful functions:
     - extract_profile
     - profile
     - spot size
+    - compute_fwhm
+    - find_max_min
+    - fwhm_2d
+    - fwhm_1d
+    
 """
 
 def space(x_total, num_pix):
@@ -253,3 +258,132 @@ def spot_size(fwhm_x, fwhm_y, wavelength):
     Returns the spot size (jnp.array).
     """
     return jnp.pi * (fwhm_x/2) * (fwhm_y/2) / wavelength**2
+
+def compute_fwhm(light, light_specs, field=''):
+    """
+    Computes FWHM2D (in um).
+    
+    Parameters:
+        light (object): can be a jnp.array if field='' is set to 'Intensity'.
+        light_specs (list): list with light specs - measurement plane [x, y].
+        field (str): component for which compute FWHM. Can be 'Ex', 'Ey', 'Ez', 'r' (radial), 'rz' (total field) and 'Intensity' if the input is not a field, but an intensity array.
+    Returns:
+        FWHMx and FWHMy
+    
+    > Warning: It is not accurate when assymetric beam shapes appear.
+    """
+    if field == 'Ex':
+        intensity = (jnp.abs(light.Ex)) ** 2
+    elif field == 'Ey':
+        intensity = (jnp.abs(light.Ey)) ** 2
+    elif field == 'Ez':
+        intensity = (jnp.abs(light.Ez)) ** 2
+    elif field == 'r':
+        intensity = jnp.abs(light.Ex) ** 2 + (jnp.abs(light.Ey)) ** 2
+    elif field == 'rz':
+        intensity = (jnp.abs(light.Ex)) ** 2 + (jnp.abs(light.Ey)) ** 2 + (jnp.abs(light.Ez)) ** 2
+    elif field == 'Intensity':
+        intensity = jnp.abs(light)
+
+    FWHMx, FWHMy = fwhm_2d(light_specs[0], light_specs[1], intensity)
+
+    return FWHMx, FWHMy
+
+def find_max_min(value, x, y, kind =''):
+    """
+    Find the position of maximum and minimum values within a 2D array.
+    
+    Parameters:
+        value (jnp.array): 2-dimensional array with values. 
+        x (jnp.array): x-position array
+        y (jnp.array): y-position array
+        kind (str): choose whether to detect minimum 'min' or maximum 'max'. 
+    
+    Returns:
+        idx (int, int): indexes of the position of max/min.
+        xy (float, float): space position of max/min.
+        ext_value (float): max/min value.
+        
+    >> Diffractio-adapted function (https://pypi.org/project/diffractio/) <<  
+    """
+    if kind =='min':
+        val = jnp.where(value==jnp.min(value))
+    if kind =='max':
+        val = jnp.where(value==jnp.max(value))
+    
+    # Extract coordinates into separate arrays:
+    coordinates = jnp.array(list(zip(val[1], val[0])))
+    coords_0 = coordinates[:, 0]
+    coords_1 = coordinates[:, 1]
+
+    # Index array:
+    idx = coordinates.astype(int)
+
+    # Array with space positions:
+    xy = jnp.stack([x[coords_0], y[coords_1]], axis=1)
+
+    # Array with extreme values:
+    ext_value = value[coords_1, coords_0]
+    
+    return idx, xy, ext_value
+
+def fwhm_2d(x, y, intensity):
+    """
+    Computes FWHM of an 2-dimensional intensity array.
+    
+    Parameters:
+        x (jnp.array): x-position array.
+        y (jnp.array): y-position array.
+        intensity (jnp.array): 2-dimensional intensity array.
+        
+    Returns: 
+        fwhm_x and fwhm_y
+        
+    >> Diffractio-adapted function (https://pypi.org/project/diffractio/) << 
+    """
+    i_position, _, _ = find_max_min(jnp.transpose(intensity), x, y, kind='max')
+
+    Ix = intensity[:, i_position[0, 1]]
+    Iy = intensity[i_position[0, 0], :]
+
+    fwhm_x = fwhm_1d(x, Ix)
+    fwhm_y = fwhm_1d(y, Iy)
+    
+    return fwhm_x, fwhm_y
+
+def fwhm_1d(x, intensity):
+    """
+    Computes FWHM of 1-dimensional intensity array.
+    
+    Parameters:
+        x (jnp.array): 1D-position array.
+        intensity (jnp.array): 1-dimensional intensity array.
+    Returns: 
+        fwhm in 1 dimension
+        
+    >> Diffractio-adapted function (https://pypi.org/project/diffractio/) << 
+    """
+    # Setting-up:
+    dx = x[1] - x[0]
+    I_max = jnp.max(intensity)
+    I_half = I_max * 0.5
+    
+    # Pixels with I max:
+    i_max = jnp.where(intensity == I_max)
+    # Compute the pixel location:
+    i_max = int(i_max[0][0])
+
+    # Compute the slopes:
+    i_left, _, distance_left = nearest(intensity[0:i_max], I_half)
+    slope_left = (intensity[i_left + 1] - intensity[i_left]) / dx
+
+    i_right, _, distance_right = nearest(intensity[i_max::], I_half)
+    slope_right = (intensity[i_max + i_right] - intensity[i_max + i_right - 1]) / dx
+
+    x_right = (i_right + i_max) * dx - distance_right / slope_right
+    x_left = i_left * dx - distance_left / slope_left
+
+    # Compute fwhm:
+    fwhm = x_right - x_left
+    
+    return fwhm
