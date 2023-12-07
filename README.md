@@ -65,7 +65,7 @@ The code for each of these optical setups is provided in the Jupyter notebook of
 
 We evaluated our framework by conducting several tests - see [Figure 1](https://arxiv.org/abs/2310.08408#). The experiments were run on an Intel CPU Xeon Gold 6130 and Nvidia GPU Quadro RTX 6000. 
 
- (1) Average execution time (in seconds) over 100 runs, within a computational window size of $2048\times 2048$, for scalar and vectorial field propagation using Rayleigh-Sommerfeld (RS, VRS) and Chirped z-transform (CZT, VCZT) in [Diffractio](https://pypi.org/project/diffractio/) and XLuminA. Times for XLuminA reflect the run with pre-compiled jitted functions.
+ (1) Average execution time (in seconds) over 100 runs, within a computational window size of $2048\times 2048$, for scalar and vectorial field propagation using Rayleigh-Sommerfeld (RS, VRS) and Chirped z-transform (CZT, VCZT) in [Diffractio](https://pypi.org/project/diffractio/) and XLuminA. Times for XLuminA reflect the run with pre-compiled jitted functions. The Python files corresponding to light propagation algorithms testing are [scalar_diffractio.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/examples/scalar_diffractio.py) and [vectorial_diffractio.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/examples/vectorial_diffractio.py) for Diffractio, and [scalar_xlumina.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/examples/scalar_xlumina.py) and [vectorial_xlumina.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/examples/vectorial_xlumina.py) for XLuminA. 
 
 <img src="miscellaneous/propagation_comparison.png" alt="propagation" width="500"/>
 
@@ -78,6 +78,8 @@ We evaluated our framework by conducting several tests - see [Figure 1](https://
 <img src="miscellaneous/performance_convergence.png" alt="performance" width="700"/>
 
 The Jupyter notebook used for running these simulations is provided as [test_diffractio_vs_xlumina.ipynb](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/examples/test_diffractio_vs_xlumina.ipynb). 
+
+The Python files corresponding to numerical/autodiff evaluations are [numerical_methods_evaluation_diffractio.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/examples/numerical_methods_evaluation_diffractio.py), [numerical_methods_evaluation_xlumina.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/examples/numerical_methods_evaluation_xlumina.py) and [autodiff_evaluation_xlumina.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/examples/autodiff_evaluation_xlumina.py)
 
 *If you want to run the comparison test of the propagation functions, you need to install [**Diffractio**](https://https://pypi.org/project/diffractio/) - The version of Diffractio used in this project is v0.1.1.*
 
