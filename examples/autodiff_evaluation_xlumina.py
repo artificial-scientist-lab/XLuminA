@@ -1,4 +1,12 @@
 import numpy as np
+
+# Setting the path for XLuminA modules:
+current_path = os.path.abspath(os.path.join('..'))
+module_path = os.path.join(current_path)
+
+if module_path not in sys.path:
+    sys.path.append(module_path)
+    
 from xlumina.__init__ import um, nm, mm, degrees, radians
 from xlumina.wave_optics import *
 from xlumina.vectorized_optics import *
