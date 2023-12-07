@@ -59,13 +59,13 @@ Examples of some experiments that can be reproduced with XLuminA are:
 * Polarization-based beam shaping as used in [STED (stimulated emission depletion) microscopy](https://opg.optica.org/ol/fulltext.cfm?uri=ol-19-11-780&id=12352), 
 * The [sharp focus of a radially polarized light beam](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.91.233901).
 
-The code for each of these optical setups is provided in the Jupyter notebook of [examples.ipynb](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/examples/examples.ipynb).
+The code for each of these optical setups is provided in the Jupyter notebook of [examples.ipynb](https://github.com/artificial-scientist-lab/XLuminA/blob/main/examples/examples.ipynb).
 
 # 🚀 Testing XLuminA's efficiency:
 
 We evaluated our framework by conducting several tests - see [Figure 1](https://arxiv.org/abs/2310.08408#). The experiments were run on an Intel CPU Xeon Gold 6130 and Nvidia GPU Quadro RTX 6000. 
 
- (1) Average execution time (in seconds) over 100 runs, within a computational window size of $2048\times 2048$, for scalar and vectorial field propagation using Rayleigh-Sommerfeld (RS, VRS) and Chirped z-transform (CZT, VCZT) in [Diffractio](https://pypi.org/project/diffractio/) and XLuminA. Times for XLuminA reflect the run with pre-compiled jitted functions. The Python files corresponding to light propagation algorithms testing are [scalar_diffractio.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/examples/scalar_diffractio.py) and [vectorial_diffractio.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/examples/vectorial_diffractio.py) for Diffractio, and [scalar_xlumina.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/examples/scalar_xlumina.py) and [vectorial_xlumina.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/examples/vectorial_xlumina.py) for XLuminA. 
+ (1) Average execution time (in seconds) over 100 runs, within a computational window size of $2048\times 2048$, for scalar and vectorial field propagation using Rayleigh-Sommerfeld (RS, VRS) and Chirped z-transform (CZT, VCZT) in [Diffractio](https://pypi.org/project/diffractio/) and XLuminA. Times for XLuminA reflect the run with pre-compiled jitted functions. The Python files corresponding to light propagation algorithms testing are [scalar_diffractio.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/examples/scalar_diffractio.py) and [vectorial_diffractio.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/examples/vectorial_diffractio.py) for Diffractio, and [scalar_xlumina.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/examples/scalar_xlumina.py) and [vectorial_xlumina.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/examples/vectorial_xlumina.py) for XLuminA. 
 
 <img src="miscellaneous/propagation_comparison.png" alt="propagation" width="500"/>
 
@@ -77,9 +77,9 @@ We evaluated our framework by conducting several tests - see [Figure 1](https://
  
 <img src="miscellaneous/performance_convergence.png" alt="performance" width="700"/>
 
-The Jupyter notebook used for running these simulations is provided as [test_diffractio_vs_xlumina.ipynb](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/examples/test_diffractio_vs_xlumina.ipynb). 
+The Jupyter notebook used for running these simulations is provided as [test_diffractio_vs_xlumina.ipynb](https://github.com/artificial-scientist-lab/XLuminA/blob/main/examples/test_diffractio_vs_xlumina.ipynb). 
 
-The Python files corresponding to numerical/autodiff evaluations are [numerical_methods_evaluation_diffractio.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/examples/numerical_methods_evaluation_diffractio.py), [numerical_methods_evaluation_xlumina.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/examples/numerical_methods_evaluation_xlumina.py) and [autodiff_evaluation_xlumina.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/examples/autodiff_evaluation_xlumina.py)
+The Python files corresponding to numerical/autodiff evaluations are [numerical_methods_evaluation_diffractio.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/examples/numerical_methods_evaluation_diffractio.py), [numerical_methods_evaluation_xlumina.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/examples/numerical_methods_evaluation_xlumina.py) and [autodiff_evaluation_xlumina.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/examples/autodiff_evaluation_xlumina.py)
 
 *If you want to run the comparison test of the propagation functions, you need to install [**Diffractio**](https://https://pypi.org/project/diffractio/) - The version of Diffractio used in this project is v0.1.1.*
 
@@ -97,18 +97,18 @@ The Python files used for the discovery of these optical setups, as detailed in 
 
 | **Experiment name** | 🔬 Optical table | 🤖 Optimizer | 📄 File for data |
 |----------------|---------------|-----------|----------|
-| ***Optical telescope*** | [four_f_optical_table.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/experiments/four_f_optical_table.py) | [four_f_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/experiments/four_f_optimizer.py)| [Generate_synthetic_data.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/experiments/generate_synthetic_data.py) |
-| ***Polarization-based STED*** | [vsted_optical_table.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/experiments/vsted_optical_table.py) | [vsted_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/experiments/vsted_optimizer.py)| N/A |
-| ***Sharp focus*** | [sharp_focus_optical_table.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/experiments/sharp_focus_optical_table.py) | [sharp_focus_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/experiments/sharp_focus_optimizer.py)| N/A |
+| ***Optical telescope*** | [four_f_optical_table.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/four_f_optical_table.py) | [four_f_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/four_f_optimizer.py)| [Generate_synthetic_data.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/generate_synthetic_data.py) |
+| ***Polarization-based STED*** | [vsted_optical_table.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/vsted_optical_table.py) | [vsted_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/vsted_optimizer.py)| N/A |
+| ***Sharp focus*** | [sharp_focus_optical_table.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/sharp_focus_optical_table.py) | [sharp_focus_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/sharp_focus_optimizer.py)| N/A |
 
-★ The large-scale setup functions are defined in [xl_optical_table.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/experiments/xl_optical_table.py) and [xl_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/experiments/xl_optimizer.py). 
+★ The large-scale setup functions are defined in [xl_optical_table.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/xl_optical_table.py) and [xl_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/xl_optimizer.py). 
 
 
 # 👀 Overview:
 
 In this section we list the available functions in different files and a brief description:
 
-1. In [wave_optics.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/wave_optics.py): module for scalar optical fields.
+1. In [wave_optics.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/wave_optics.py): module for scalar optical fields.
    
    |*Class*|*Functions*|*Description*|
    |---------------|----|-----------|   
