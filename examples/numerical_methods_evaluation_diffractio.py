@@ -23,7 +23,8 @@ gb_gt.u = gb.u * np.exp(1j * phase_mask)
 
 # Optical setup
 def setup(gb, parameters):
-    gb_modulated, _ = npSLM(gb.u, parameters, gb.x.shape[0])
+    gb_propagated = gb.RS(25000*mm)
+    gb_modulated, _ = npSLM(gb_propagated.u, parameters, gb.x.shape[0])
     return gb_modulated
 
 def mse_phase(input_light, target_light):

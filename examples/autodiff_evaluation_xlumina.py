@@ -34,6 +34,7 @@ gb_gt.set_spiral()
 
 # Define the setup
 def setup(gb, parameters):
+    gb_propagated = gb.RS_propagation(z=25000*mm)
     gb_modulated, _ = SLM(gb, parameters, gb.x.shape[0])
     return gb_modulated
 
@@ -68,7 +69,7 @@ def update(step_index, optimizer_state):
 loss_value = jit(loss)
 
 # Optimizer settings
-STEP_SIZE = 0.01
+STEP_SIZE = 0.1
 num_iterations = 50000
 n_best = 50
 best_loss = 1e10
@@ -116,5 +117,5 @@ for i in range(num_samples):
     times.append(time.perf_counter() - tic)
     ratio.append((time.perf_counter() - tic)/step)
 
-filename = f"jax_cpu_eval_{sensor_lateral_size}.npy" 
+filename = f"xlumina_cpu_eval_{sensor_lateral_size}.npy" 
 np.save(filename, {"Time": times, "Step": steps, "t/step": ratio})
