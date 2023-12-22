@@ -69,17 +69,17 @@ We evaluated our framework by conducting several tests - see [Figure 1](https://
 
 <img src="miscellaneous/propagation_comparison.png" alt="propagation" width="500"/>
 
- (2) we compare the gradient evaluation times of numerical (using SciPy's [BFGS optimizer](https://docs.scipy.org/doc/scipy/reference/optimize.minimize-bfgs.html#optimize-minimize-bfgs)) *vs* analytical differentiation (using JAX's [ADAM optimizer](https://jax.readthedocs.io/en/latest/jax.example_libraries.optimizers.html)) when optimizing using XLuminA's optical simulator...
+ (2) We compare the gradient evaluation time of numerical methods (using Diffractio's optical simulator and SciPy's [BFGS optimizer](https://docs.scipy.org/doc/scipy/reference/optimize.minimize-bfgs.html#optimize-minimize-bfgs)) *vs* autodiff (analytical) differentiation (using XLuminA's optical simulator with JAX's [ADAM optimizer](https://jax.readthedocs.io/en/latest/jax.example_libraries.optimizers.html)) across various resolutions:
  
 <img src="miscellaneous/performance.png" alt="performance" width="700"/>
 
-(3) and its convergence time:
+(3) We compare the convergence time of numerical methods (using Diffractio's optical simulator and SciPy's [BFGS optimizer](https://docs.scipy.org/doc/scipy/reference/optimize.minimize-bfgs.html#optimize-minimize-bfgs)) *vs* autodiff (analytical) differentiation (using XLuminA's optical simulator with JAX's [ADAM optimizer](https://jax.readthedocs.io/en/latest/jax.example_libraries.optimizers.html)) across various resolutions:
  
 <img src="miscellaneous/performance_convergence.png" alt="performance" width="700"/>
 
 The Jupyter notebook used for running these simulations is provided as [test_diffractio_vs_xlumina.ipynb](https://github.com/artificial-scientist-lab/XLuminA/blob/main/examples/test_diffractio_vs_xlumina.ipynb). 
 
-The Python files corresponding to numerical/autodiff evaluations are [numerical_methods_evaluation_diffractio.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/examples/numerical_methods_evaluation_diffractio.py), [numerical_methods_evaluation_xlumina.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/examples/numerical_methods_evaluation_xlumina.py) and [autodiff_evaluation_xlumina.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/examples/autodiff_evaluation_xlumina.py)
+The Python files corresponding to numerical/autodiff evaluations are [numerical_methods_evaluation_diffractio.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/examples/numerical_methods_evaluation_diffractio.py), and [autodiff_evaluation_xlumina.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/examples/autodiff_evaluation_xlumina.py)
 
 *If you want to run the comparison test of the propagation functions, you need to install [**Diffractio**](https://https://pypi.org/project/diffractio/) - The version of Diffractio used in this project is v0.1.1.*
 
