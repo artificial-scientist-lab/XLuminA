@@ -13,7 +13,7 @@ XLuminA can be installed with
 pip install xlumina
 ```
 
-This will install [**JAX and jaxlib**](https://jax.readthedocs.io/en/latest/index.html) (the version of JAX used in this project is v0.4.13), [**Optax**](https://github.com/google-deepmind/optax/tree/master) (the version of Optax used in this project is v0.1.7), and [**SciPy**](https://scipy.org) (the version of SciPy used in this project is v1.10.1).
+which should install in about 10 seconds. This will install [**JAX and jaxlib**](https://jax.readthedocs.io/en/latest/index.html) (the version of JAX used in this project is v0.4.13), [**Optax**](https://github.com/google-deepmind/optax/tree/master) (the version of Optax used in this project is v0.1.7), and [**SciPy**](https://scipy.org) (the version of SciPy used in this project is v1.10.1).
 
 ### GPU compatibility:
 
@@ -26,6 +26,13 @@ pip install --upgrade "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-re
 # CUDA 11 installation
 pip install --upgrade "jax[cuda11_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 ```
+
+XLuminA has been tested on the following operating systems:
+
+Linux Enterprise Server 15 SP4 15.4,
+
+and it has been successfully installed in Windows 10 (64-bit) and MacOS Monterey 12.6.2 
+
 
 # 👾 Features:
 
