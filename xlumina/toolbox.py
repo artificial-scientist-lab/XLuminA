@@ -13,6 +13,7 @@ Contains useful functions:
     - space
     - wrap_phase
     - is_conserving_energy
+    - softmin
     - delta_kronecker
     - build_LCD_cell
     - draw_sSLM
@@ -77,6 +78,14 @@ def is_conserving_energy(light_source, propagated_light):
         I_propagated = jnp.sum(jnp.abs(propagated_light.Ex**2)) + jnp.sum(jnp.abs(propagated_light.Ey**2)) + jnp.sum(jnp.abs(propagated_light.Ez**2))
     
     return I_propagated / I_source
+
+@jit
+def softmin(args, beta=90):
+    """
+    Differentiable version for min() function.
+    """
+    return - nn.logsumexp(-beta * args) / beta
+
 
 def delta_kronecker(a, b):
     """
