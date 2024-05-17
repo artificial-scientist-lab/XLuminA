@@ -105,10 +105,14 @@ The Python files used for the discovery of these optical setups, as detailed in 
 | **Experiment name** | 🔬 Optical table | 🤖 Optimizer | 📄 File for data |
 |----------------|---------------|-----------|----------|
 | ***Optical telescope*** | [four_f_optical_table.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/four_f_optical_table.py) | [four_f_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/four_f_optimizer.py)| [Generate_synthetic_data.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/generate_synthetic_data.py) |
-| ***Polarization-based STED*** | [vsted_optical_table.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/vsted_optical_table.py) | [vsted_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/vsted_optimizer.py)| N/A |
-| ***Sharp focus*** | [sharp_focus_optical_table.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/sharp_focus_optical_table.py) | [sharp_focus_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/sharp_focus_optimizer.py)| N/A |
+| ***Pure topological discovery: large-scale sharp focus (Dorn, Quabis and Leuchs, 2004)*** | [hybrid_with_fixed_PM.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/hybrid_with_fixed_PM.py) | [hybrid_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/hybrid_optimizer.py)| N/A |
+| ***Pure topological discovery: STED microscopy*** | [hybrid_with_fixed_PM.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/hybrid_with_fixed_PM.py) | [hybrid_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/hybrid_optimizer.py)| N/A |
+| ***6x6 grid: pure topological discovery*** | [six_times_six_ansatz_with_fixed_PM.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/six_times_six_ansatz_with_fixed_PM.py) | [hybrid_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/hybrid_optimizer.py)| N/A |
+| ***Large-scale polarization-based STED*** | [hybrid_sted_optical_table.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/hybrid_sted_optical_table.py) | [hybrid_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/hybrid_optimizer.py)| N/A |
+| ***Large-scale sharp focus (Dorn, Quabis and Leuchs, 2004)*** | [hybrid_sharp_optical_table.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/hybrid_sharp_optical_table.py) | [hybrid_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/hybrid_optimizer.py)| N/A |
 
-★ The large-scale setup functions are defined in [xl_optical_table.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/xl_optical_table.py) and [xl_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/xl_optimizer.py). 
+★ The optical tables and optimizers corresponding to the optimizations in ***previous versions (i.e., not including topological discovery)*** are defined in 
+[vsted_optical_table.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/vsted_optical_table.py) with [vsted_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/vsted_optimizer.py); [sharp_focus_optical_table.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/sharp_focus_optical_table.py) with [sharp_focus_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/sharp_focus_optimizer.py); [xl_optical_table.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/xl_optical_table.py) and [xl_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/xl_optimizer.py).
 
 
 # 👀 Overview:
@@ -164,6 +168,8 @@ In this section we list the available functions in different files and a brief d
     |`sSLM` | *super*-Spatial Light Modulator: adds phase mask (pixel-wise) to $E_x$ and $E_y$ independently. |
     | `LCD` | Liquid crystal device: builds any linear wave-plate. | 
     | `linear_polarizer` | Linear polarizer.|
+    | `BS_symmetric` | Symmetric beam splitter.|
+    | `BS_symmetric_SI` | Symmetric beam splitter with single input.|
     | `BS` | Single-side coated dielectric beam splitter.|
     | `high_NA_objective_lens` | High NA objective lens (only for `VectorizedLight`).|
     | `VCZT_objective_lens` | Propagation through high NA objective lens (only for `VectorizedLight`).|
@@ -176,10 +182,16 @@ In this section we list the available functions in different files and a brief d
     | `forked_grating` | Forked grating of variable size, orientation, and topological charge. |
     | ***Pre-built optical setups*** | - | 
     | `building_block` | Basic building unit. Consists of a `sSLM`, and `LCD` linked via `VRS_propagation`. |
-    | `xl_setup` | Optical table with the large set-up (*Fig.6a* of [our paper](https://arxiv.org/abs/2310.08408#)).|
-    | `vSTED` | Optical table with the vectorial-based STED setup (*Fig.3a* of [our paper](https://arxiv.org/abs/2310.08408#)).|
-    | `sharp_focus` | Optical table with the sharp focus of a radially polarized light beam setup (*Fig.4a* of [our paper](https://arxiv.org/abs/2310.08408#)).|
-    | `general_setup` | Optical table with the general setup for large-scale discovery (*Fig.5a* of [our paper](https://arxiv.org/abs/2310.08408#)).|
+    | `fluorescence`| Fluorescence model.|
+    | `hybrid_setup_fixed_slms_fluorophores`| 3x3 optical table with SLMs randomly positioned displaying fixed phase masks; to be used for pure topological discovery; contains the fluorescence model in all detectors. (*Fig. 4a* of [our paper](https://arxiv.org/abs/2310.08408#))|
+    | `hybrid_setup_fixed_slms`| 3x3 optical table with SLMs randomly positioned displaying fixed phase masks; to be used for pure topological discovery. (*Fig. 4b* of [our paper](https://arxiv.org/abs/2310.08408#))|
+    | `hybrid_setup_fluorophores`| 3x3 optical table to be used for hybrid (topological + optical parameter) discovery; contains the fluorescence model in all detectors . (*Fig. 5a* and *Fig. 6* of [our paper](https://arxiv.org/abs/2310.08408#))|
+    | `hybrid_setup_sharp_focus`| 3x3 optical table to be used for hybrid (topological + optical parameter) discovery. (*Fig. 5b* of [our paper](https://arxiv.org/abs/2310.08408#))|
+    | `six_times_six_ansatz`| 6x6 optical table to be used for pure topological discovery. (*Extended Data Fig. 6* of [our paper](https://arxiv.org/abs/2310.08408#))|
+    | `general_setup` | Optical table with the general setup for large-scale discovery (*Fig. 3* of [our paper](https://arxiv.org/abs/2310.08408#)).|
+    | `vSTED` | Optical table with the vectorial-based STED setup (*Extended Data Fig. 4a* of [our paper](https://arxiv.org/abs/2310.08408#)).|
+    | `sharp_focus` | Optical table with the sharp focus of a radially polarized light beam setup (*Extended Data Fig. 4b* of [our paper](https://arxiv.org/abs/2310.08408#)).|
+    | `xl_setup` | Optical table with the large set-up (*Fig.6a* [previous version v3 of our paper](https://arxiv.org/abs/2310.08408#)).|
     
 
 4. In [toolbox.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/toolbox.py): file with useful functions. 
@@ -190,6 +202,7 @@ In this section we list the available functions in different files and a brief d
    | `space` | Builds the space where light is placed. |
    | `wrap_phase` | Wraps any phase mask into $[-\pi, \pi]$ range.|
    | `is_conserving_energy` | Computes the total intensity from the light source and compares is with the propagated light - [Ref](https://doi.org/10.1117/12.482883).|
+   | `softmin` | Differentiable version for min() function.|
    | `delta_kronecker` | Kronecker delta.|
    | `build_LCD_cell` | Builds the cell for `LCD`.|
    | `draw_sSLM` | Plots the two phase masks of `sSLM`.|
@@ -203,6 +216,7 @@ In this section we list the available functions in different files and a brief d
 
    | *Function* |*Description*|  
    |---------------|----|
+   | `small_area_hybrid` | Small area loss function valid for hybrid (topology + optical parameters) optimization|
    | `vMSE_Intensity` | Parallel computation of Mean Squared Error (Intensity) for a given electric field component $E_x$, $E_y$ or $E_z$. |
    | `MSE_Intensity` | Mean Squared Error (Intensity) for a given electric field component $E_x$, $E_y$ or $E_z$. |
    | `vMSE_Phase` | Parallel computation of Mean Squared Error (Phase) for a given electric field component $E_x$, $E_y$ or $E_z$. |
