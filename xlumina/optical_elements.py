@@ -26,6 +26,10 @@ config.update("jax_enable_x64", True)
         - sSLM
         - LCD
         - linear_polarizer
+NEW:    - BS_symmetric 
+NEW:    - bs_port0
+NEW:    - bs_port1
+NEW:    - BS_symmetric_SI
         - BS
         - high_NA_objective_lens
             + _high_NA_objective_lens_
@@ -43,6 +47,13 @@ config.update("jax_enable_x64", True)
     
     (5) Pre-built optical set-ups:
         - building_block
+NEW:    - fluorescence
+NEW:    - vectorized_fluorophores
+NEW:    - hybrid_setup_fixed_slms_fluorophores
+NEW:    - hybrid_setup_fixed_slms
+NEW:    - hybrid_setup_sharp_focus
+NEW:    - hybrid_setup_fluorophores
+NEW:    - six_times_six_ansatz
         - xl_setup
         - vSTED
         - sharp_focus
@@ -252,6 +263,122 @@ def linear_polarizer(input_field, alpha):
     light_out.Ey = E_out[:, :, 1]
     
     return light_out
+
+def BS_symmetric(a, b, theta):
+    """
+    Classical lossless two-mode beam splitter of reflectance R = |sin(theta)|**2, and transmittance T = |cos(theta)|**2. 
+    
+    Scheme:
+                 a
+                 |
+                 v        
+          b --> [\] --> c = (r_ac) * a + (t_bc) * b
+                 | 
+                 v
+                 d = (t_ad) * a + (r_bd) * b 
+   
+    ------------------------------------------------------------ 
+    
+    BS = [[ R     i*T],
+          [i*T     R ]]
+    
+    c = [[R * Ex_a + T * i * Ex_b],
+         [R * Ey_a + T * i * Ey_b]] 
+               
+    d = [[T * i * Ex_a + R * Ex_b],
+         [T * i * Ey_a + R * Ey_b]]    
+         
+    Reflectance = R**2
+    Transmissivity = T**2
+    
+    ------------------------------------------------------------          
+    
+    Parameters: 
+        a (VectorizedLight): electric field in port a1
+        b (VectorizedLight): electric field in port a2
+        theta (float): reflectance (or transmittance); theta = arcsin(R) = arccos(T)
+    
+    Returns c and d (VectorizedLight). 
+    """
+    # Define light at ports b1 and b2.
+    c = VectorizedLight(a.x, a.y, a.wavelength)
+    d = VectorizedLight(a.x, a.y, a.wavelength)
+    
+    # Define reflectance and transmittance
+    T = jnp.abs(jnp.cos(theta))
+    R = jnp.abs(jnp.sin(theta))
+    
+    c.Ex = (R * a.Ex) + (1j * T * b.Ex) 
+    c.Ey = (R * a.Ey) + (1j * T * b.Ey)
+
+    d.Ex = (1j * T * a.Ex) + (R * b.Ex)
+    d.Ey = (1j * T * a.Ey) + (R * b.Ey)  
+    
+    return c, d
+
+@jit
+def bs_port0(a_Ex, a_Ey, c_Ex, c_Ey, d_Ex, d_Ey, T, R):
+    """ [For BS_symmetric_SI]: BS single input - port 0 - """
+    c_Ex = (R * a_Ex) 
+    c_Ey = (R * a_Ey)
+    d_Ex = (1j * T * a_Ex)
+    d_Ey = (1j * T * a_Ey)
+    return c_Ex, c_Ey, d_Ex, d_Ey
+
+@jit
+def bs_port1(a_Ex, a_Ey, c_Ex, c_Ey, d_Ex, d_Ey, T, R):
+    """ [For BS_symmetric_SI]: BS single input - port 1 - """
+    d_Ex = (R * a_Ex) 
+    d_Ey = (R * a_Ey)
+    c_Ex = (1j * T * a_Ex)
+    c_Ey = (1j * T * a_Ey)
+    return c_Ex, c_Ey, d_Ex, d_Ey
+
+def BS_symmetric_SI(a, theta, port=0):
+    """
+    Classical lossless single input beam splitter of reflectance R = |sin(theta)|**2, and transmittance T = |cos(theta)|**2. 
+    
+    Scheme:
+        a (port 0)
+        |
+        v        
+       [\] --> c = (r_ac) * a 
+        | 
+        v
+        d = (t_ad) * a 
+   
+    ------------------------------------------------------------ 
+    
+    c = [[R * Ex_a],
+         [R * Ey_a]] 
+               
+    d = [[T * i * Ex_a],
+         [T * i * Ey_a]]    
+         
+    Reflectance = R**2
+    Transmissivity = T**2
+    
+    ------------------------------------------------------------          
+    
+    Parameters: 
+        a (VectorizedLight): electric field in port a1
+        theta (float): reflectance (or transmittance); theta = arcsin(R) = arccos(T)
+        port (int): if 0, light incoming through port a; if 1, port b.
+    
+    Returns c and d (VectorizedLight). 
+    """
+    # Define light at ports b1 and b2.
+    c = VectorizedLight(a.x, a.y, a.wavelength)
+    d = VectorizedLight(a.x, a.y, a.wavelength)
+    
+    # Define reflectance and transmittance
+    T = jnp.abs(jnp.cos(theta))
+    R = jnp.abs(jnp.sin(theta))
+    
+    # Apply BS single input in a differentiable way
+    c.Ex, c.Ey, d.Ex, d.Ey = lax.cond(port == 0, bs_port0, bs_port1, a.Ex, a.Ey, c.Ex, c.Ey, d.Ex, d.Ey, T, R)
+    
+    return c, d
 
 def BS(a1, a2, R, T, phase):
     """
@@ -630,6 +757,993 @@ def building_block(input_light, alpha, phi, z, eta, theta):
     l_propagated, _ = l_modulated.VRS_propagation(z)
     # Apply LCD:
     return LCD(l_propagated, eta, theta)
+
+def fluorescence(i_ex, i_dep, beta=1):
+    """
+    Fluorescence function - allows STED.
+    
+    Parameters: 
+        i_ex (jnp.array): Excitation intensity
+        i_dep (jnp.array): Depletion intensity
+        beta (float, int): Strength parameter
+        
+    Returns effective intensity from stimulated emission-depletion.
+    """
+    # Epsilon - small numerical constant to prevent division by 0
+    eps = 1e-8
+    return i_ex * (1 - beta * (1- jnp.exp(-(i_dep/(i_ex + eps))))) 
+
+@jit
+def vectorized_fluorophores(i_ex, i_dep):
+    """
+    Vectorized version of [fluorescence]: Allows to compute effective intensity across an array of detectors.
+    """
+    vfluo = vmap(fluorescence, in_axes=(0, 0))
+    return vfluo(i_ex, i_dep)
+
+
+def hybrid_setup_fixed_slms_fluorophores(ls1, ls2, ls3, ls4, ls5, ls6, parameters, fixed_params, distance_offset = 8.9):
+    """
+    Hybrid steup with fixed phase masks for STED pure topology discovery: ls1 = red wavelength and ls2 = green wavelength
+    """
+    # Get fixed params:
+    r=fixed_params[0]
+    f=fixed_params[1]
+    xout=fixed_params[2]
+    yout=fixed_params[3]
+    
+    # Dorn, Quabis, Leuchs PM:
+    phase1_1 = fixed_params[4]
+    phase1_2 = fixed_params[5]
+    # STED spiral PM
+    phase2_1 = fixed_params[6]
+    phase2_2 = fixed_params[6]
+    # Forked grating PM
+    phase3_1 = fixed_params[7]
+    phase3_2 = fixed_params[7]
+    # Ladder grating PM
+    phase4_1 = fixed_params[8]
+    phase4_2 = fixed_params[9]
+    
+    # Distances
+    z1_1 = (jnp.abs(parameters[0]) * 100 + distance_offset)*cm
+    z1_2 = (jnp.abs(parameters[1]) * 100 + distance_offset)*cm
+    z2_1 = (jnp.abs(parameters[2]) * 100 + distance_offset)*cm
+    z2_2 = (jnp.abs(parameters[3]) * 100 + distance_offset)*cm
+    z3_1 = (jnp.abs(parameters[4]) * 100 + distance_offset)*cm
+    z3_2 = (jnp.abs(parameters[5]) * 100 + distance_offset)*cm
+    z4_1 = (jnp.abs(parameters[6]) * 100 + distance_offset)*cm
+    z4_2 = (jnp.abs(parameters[7]) * 100 + distance_offset)*cm
+    
+    # Beam splitter ratios (theta: raw input from (0,1) to (-pi, pi)) 
+    bs1 = parameters[8]* 2*jnp.pi - jnp.pi
+    bs2 = parameters[9]* 2*jnp.pi - jnp.pi
+    bs3 = parameters[10]* 2*jnp.pi - jnp.pi
+    bs4 = parameters[11]* 2*jnp.pi - jnp.pi
+    bs5 = parameters[12]* 2*jnp.pi - jnp.pi
+    bs6 = parameters[13]* 2*jnp.pi - jnp.pi
+    bs7 = parameters[14]* 2*jnp.pi - jnp.pi
+    bs8 = parameters[15]* 2*jnp.pi - jnp.pi
+    bs9 = parameters[16]* 2*jnp.pi - jnp.pi
+
+    # LCDs:
+    eta1   = parameters[17]* 2*jnp.pi - jnp.pi
+    theta1 = parameters[18]* 2*jnp.pi - jnp.pi
+    eta2   = parameters[19]* 2*jnp.pi - jnp.pi
+    theta2 = parameters[20]* 2*jnp.pi - jnp.pi
+    eta3   = parameters[21]* 2*jnp.pi - jnp.pi
+    theta3 = parameters[22]* 2*jnp.pi - jnp.pi
+    eta4   = parameters[23]* 2*jnp.pi - jnp.pi
+    theta4 = parameters[24]* 2*jnp.pi - jnp.pi
+    
+    # 1st row:
+    # BS port 0 for red
+    c1_r, d1_r = BS_symmetric_SI(ls1, bs1, port=0)
+    # BS port 1 for green
+    c1_g, d1_g = BS_symmetric_SI(ls4, bs1, port=1)
+    
+    # Common PM
+    b2_r, _ = (building_block(c1_r, phase1_1, phase1_2, z1_1, eta1, theta1)).VRS_propagation(z1_2)
+    b2_g, _ = (building_block(c1_g, phase1_1, phase1_2, z1_1, eta1, theta1)).VRS_propagation(z1_2)
+    
+    # BS port 1 for red
+    c2_r, d2_r = BS_symmetric_SI(b2_r, bs2, port=1)
+    # BS symm for green
+    c2_g, d2_g = BS_symmetric(ls2, b2_g, bs2)
+    
+    # Common prop
+    b3_r, _ = c2_r.VRS_propagation(z2_1 + z2_2)
+    b3_g, _ = c2_g.VRS_propagation(z2_1 + z2_2)
+    
+    # Symm for red
+    c3_r, d3_r = BS_symmetric(ls3, b3_r, bs3)
+    # SI port 1 green
+    c3_g, d3_g = BS_symmetric_SI(b3_g, bs3, port=1)
+    
+    # Common objective lens
+    det_1_r = VCZT_objective_lens(c3_r, r, f, xout, yout)
+    det_1_g = VCZT_objective_lens(c3_g, r, f, xout, yout)
+    
+    
+    # Mid space:
+    a5_r, _ = d2_r.VRS_propagation(z3_1 + z3_2)
+    a5_g, _ = d2_g.VRS_propagation(z3_1 + z3_2)
+    a6_r, _ = (building_block(d3_r, phase3_1, phase3_2, z3_1, eta3, theta3)).VRS_propagation(z3_2)
+    a6_g, _ = (building_block(d3_g, phase3_1, phase3_2, z3_1, eta3, theta3)).VRS_propagation(z3_2)
+    
+    # 2nd row:
+    # Symm for red
+    c4_r, d4_r = BS_symmetric(d1_r, ls5, bs4)
+    # SI port 0 for green
+    c4_g, d4_g = BS_symmetric_SI(d1_g, bs4, port=0)
+    
+    # Common prop
+    b5_r, _ = c4_r.VRS_propagation(z1_1 + z1_2)
+    b5_g, _ = c4_g.VRS_propagation(z1_1 + z1_2)
+    
+    # BS symm for both
+    c5_r, d5_r = BS_symmetric(a5_r, b5_r, bs5)
+    c5_g, d5_g = BS_symmetric(a5_g, b5_g, bs5)
+    
+    # Common PM
+    b6_r, _ = (building_block(c5_r, phase2_1, phase2_2, z2_1, eta2, theta2)).VRS_propagation(z2_2)
+    b6_g, _ = (building_block(c5_g, phase2_1, phase2_2, z2_1, eta2, theta2)).VRS_propagation(z2_2)
+    
+    # BS symm for both
+    c6_r, d6_r = BS_symmetric(a6_r, b6_r, bs6)
+    c6_g, d6_g = BS_symmetric(a6_g, b6_g, bs6)
+    
+    # Common objective lens
+    det_2_r = VCZT_objective_lens(c6_r, r, f, xout, yout)
+    det_2_g = VCZT_objective_lens(c6_g, r, f, xout, yout)
+    
+    # Mid space:
+    # Common PM
+    a7_r, _ = (building_block(d4_r, phase4_1, phase4_2, z4_1, eta4, theta4)).VRS_propagation(z4_2)
+    a7_g, _ = (building_block(d4_g, phase4_1, phase4_2, z4_1, eta4, theta4)).VRS_propagation(z4_2)
+    a8_r, _ = d5_r.VRS_propagation(z4_1 + z4_2)
+    a8_g, _ = d5_g.VRS_propagation(z4_1 + z4_2)
+    a9_r, _ = d6_r.VRS_propagation(z4_1 + z4_2)
+    a9_g, _ = d6_g.VRS_propagation(z4_1 + z4_2)
+    
+    # 3rd row:
+    # SI port 0 for red
+    c7_r, d7_r = BS_symmetric_SI(a7_r, bs7, port=0)
+    # BS sym for green
+    c7_g, d7_g = BS_symmetric(a7_g, ls6, bs7)
+    
+    # Common prop
+    b8_r, _ = c7_r.VRS_propagation(z1_1 + z1_2)
+    b8_g, _ = c7_g.VRS_propagation(z1_1 + z1_2)
+    
+    # BS sym for both
+    c8_r, d8_r = BS_symmetric(a8_r, b8_r, bs8)
+    c8_g, d8_g = BS_symmetric(a8_g, b8_g, bs8)
+    
+    # Common prop
+    b9_r, _ = c8_r.VRS_propagation(z2_1 + z2_2)
+    b9_g, _ = c8_g.VRS_propagation(z2_1 + z2_2)
+    
+    # BS sym for both
+    c9_r, d9_r = BS_symmetric(a9_r, b9_r, bs9)
+    c9_g, d9_g = BS_symmetric(a9_g, b9_g, bs9)
+    
+    # Common objective lens
+    det_3_r = VCZT_objective_lens(c9_r, r, f, xout, yout)
+    det_3_g = VCZT_objective_lens(c9_g, r, f, xout, yout)
+    
+    # Detector row:
+    det_4_r = VCZT_objective_lens(d7_r, r, f, xout, yout)
+    det_4_g = VCZT_objective_lens(d7_g, r, f, xout, yout)
+    
+    det_5_r = VCZT_objective_lens(d8_r, r, f, xout, yout)
+    det_5_g = VCZT_objective_lens(d8_g, r, f, xout, yout)
+    
+    det_6_r = VCZT_objective_lens(d9_r, r, f, xout, yout)
+    det_6_g = VCZT_objective_lens(d9_g, r, f, xout, yout)    
+    
+    # Array of detector information
+    i1_ex = jnp.abs(det_1_g.Ex)**2 + jnp.abs(det_1_g.Ey)**2
+    i2_ex = jnp.abs(det_2_g.Ex)**2 + jnp.abs(det_2_g.Ey)**2
+    i3_ex = jnp.abs(det_3_g.Ex)**2 + jnp.abs(det_3_g.Ey)**2
+    i4_ex = jnp.abs(det_4_g.Ex)**2 + jnp.abs(det_4_g.Ey)**2
+    i5_ex = jnp.abs(det_5_g.Ex)**2 + jnp.abs(det_5_g.Ey)**2
+    i6_ex = jnp.abs(det_6_g.Ex)**2 + jnp.abs(det_6_g.Ey)**2
+    
+    i1_dep = jnp.abs(det_1_r.Ex)**2 + jnp.abs(det_1_r.Ey)**2
+    i2_dep = jnp.abs(det_2_r.Ex)**2 + jnp.abs(det_2_r.Ey)**2
+    i3_dep = jnp.abs(det_3_r.Ex)**2 + jnp.abs(det_3_r.Ey)**2
+    i4_dep = jnp.abs(det_4_r.Ex)**2 + jnp.abs(det_4_r.Ey)**2
+    i5_dep = jnp.abs(det_5_r.Ex)**2 + jnp.abs(det_5_r.Ey)**2
+    i6_dep = jnp.abs(det_6_r.Ex)**2 + jnp.abs(det_6_r.Ey)**2
+    
+    # Array with intensities
+    iex = jnp.stack([i1_ex/jnp.sum(i1_ex), i2_ex/jnp.sum(i2_ex), i3_ex/jnp.sum(i3_ex), i4_ex/jnp.sum(i4_ex), i5_ex/jnp.sum(i5_ex), i6_ex/jnp.sum(i6_ex)])
+    idep = jnp.stack([i1_dep/jnp.sum(i1_dep), i2_dep/jnp.sum(i2_dep), i3_dep/jnp.sum(i3_dep), i4_dep/jnp.sum(i4_dep), i5_dep/jnp.sum(i5_dep), i6_dep/jnp.sum(i6_dep)])                        
+    
+    # Resulting STED-like beam
+    i_eff = vectorized_fluorophores(iex, idep)
+    
+    return i_eff
+
+def hybrid_setup_fixed_slms(ls1, ls2, ls3, ls4, ls5, ls6, parameters, fixed_params, distance_offset = 8.9):
+    """
+    ++++++++
+    Large-scale setup with fixed phase masks at random positions for pure tpology discovery. 
+    
+    
+    For Dorn, Quabis, Leuchs: ls1, ls2, ls3, ls4, ls5, ls6 (650 nm)
+    ++++++++
+    
+    Scheme:
+            ls1                       ls2                      ls3
+             |                         |                        |
+             |                         |                        |
+             v                         v                        v    
+    ls4 --> [BS] --> [PM #1] - z1 -> [BS] -------- z2 -------> [BS] ----> OL --> Detector 1
+             |                         |                        |
+             |                         |                     [PM #3]
+             |                         |                        |
+             z3                        z3                       z3
+             |                         |                        |
+             v                         v                        v    
+    ls5 --> [BS] -------- z1 -------> [BS] --> [PM #2] - z2 -> [BS] ----> OL --> Detector 2
+             |                         |                        |
+             |                         |                        |
+          [PM #4]                      |                        |
+             |                         |                        |
+             z4                        z4                       z4     
+             |                         |                        |
+             v                         v                        v      
+    ls6 --> [BS] -------- z1 -------> [BS] ------- z2 -------> [BS] ----> OL --> Detector 3
+             |                         |                        |        
+             |                         |                        |
+             v                         v                        v    
+             OL                        OL                       OL
+             |                         |                        |
+             v                         v                        v    
+           Detector 4                Detector 5              Detector 6
+    
+    
+    Parameters: 
+        ls1, ls2, ..., ls6 (PolarizedLightSource)
+        parameters (jnp.array): parameters to pass to the optimizer
+            BS ratios: [bs1, bs2, bs3, bs4, bs5, bs6, bs7, bs8, bs9]
+            Distances: [z1, z2, z3, z4]
+        fixed_params (jnp.array): parameters to maintain fixed during optimization [r, f, xout, yout, PM1, PM2, PM3 and PM4]; 
+        that is radius and focal length of the objective lens, XY out and phase masks 1-4.
+        distance_offset (float): From get_VRS_minimum() estimate the 'offset'.
+    
+    Returns:
+        i1, i2, i3, i4, i5 (jnp.array): Detected intensities
+    """
+    # Get fixed params:
+    r=fixed_params[0]
+    f=fixed_params[1]
+    xout=fixed_params[2]
+    yout=fixed_params[3]
+    
+    # Dorn, Quabis, Leuchs PM:
+    phase1_1 = fixed_params[4]
+    phase1_2 = fixed_params[5]
+    # STED spiral PM
+    phase2_1 = fixed_params[6]
+    phase2_2 = fixed_params[6]
+    # Forked grating PM
+    phase3_1 = fixed_params[7]
+    phase3_2 = fixed_params[7]
+    # Ladder grating PM
+    phase4_1 = fixed_params[8]
+    phase4_2 = fixed_params[9]
+    
+    # Distances
+    z1_1 = (jnp.abs(parameters[0]) * 100 + distance_offset)*cm
+    z1_2 = (jnp.abs(parameters[1]) * 100 + distance_offset)*cm
+    z2_1 = (jnp.abs(parameters[2]) * 100 + distance_offset)*cm
+    z2_2 = (jnp.abs(parameters[3]) * 100 + distance_offset)*cm
+    z3_1 = (jnp.abs(parameters[4]) * 100 + distance_offset)*cm
+    z3_2 = (jnp.abs(parameters[5]) * 100 + distance_offset)*cm
+    z4_1 = (jnp.abs(parameters[6]) * 100 + distance_offset)*cm
+    z4_2 = (jnp.abs(parameters[7]) * 100 + distance_offset)*cm
+    
+    # Beam splitter ratios (theta: raw input from (0,1) to (-pi, pi)) 
+    bs1 = parameters[8]* 2*jnp.pi - jnp.pi
+    bs2 = parameters[9]* 2*jnp.pi - jnp.pi
+    bs3 = parameters[10]* 2*jnp.pi - jnp.pi
+    bs4 = parameters[11]* 2*jnp.pi - jnp.pi
+    bs5 = parameters[12]* 2*jnp.pi - jnp.pi
+    bs6 = parameters[13]* 2*jnp.pi - jnp.pi
+    bs7 = parameters[14]* 2*jnp.pi - jnp.pi
+    bs8 = parameters[15]* 2*jnp.pi - jnp.pi
+    bs9 = parameters[16]* 2*jnp.pi - jnp.pi
+
+    # LCDs:
+    eta1   = parameters[17]* 2*jnp.pi - jnp.pi
+    theta1 = parameters[18]* 2*jnp.pi - jnp.pi
+    eta2   = parameters[19]* 2*jnp.pi - jnp.pi
+    theta2 = parameters[20]* 2*jnp.pi - jnp.pi
+    eta3   = parameters[21]* 2*jnp.pi - jnp.pi
+    theta3 = parameters[22]* 2*jnp.pi - jnp.pi
+    eta4   = parameters[23]* 2*jnp.pi - jnp.pi
+    theta4 = parameters[24]* 2*jnp.pi - jnp.pi
+    
+    # 1st row
+    c1, d1 = BS_symmetric(ls1, ls4, bs1)
+    b2, _ = (building_block(c1, phase1_1, phase1_2, z1_1, eta1, theta1)).VRS_propagation(z1_2)
+    c2, d2 = BS_symmetric(ls2, b2, bs2)
+    b3, _ = c2.VRS_propagation(z2_1 + z2_2)
+    c3, d3 = BS_symmetric(ls3, b3, bs3)
+    det_1 = VCZT_objective_lens(c3, r, f, xout, yout)
+    
+    # Mid space:
+    a5, _ = d2.VRS_propagation(z3_1 + z3_2)
+    a6, _ = (building_block(d3, phase3_1, phase3_2, z3_1, eta3, theta3)).VRS_propagation(z3_2)
+    
+    # 2nd row
+    c4, d4 = BS_symmetric(d1, ls5, bs4)
+    b5, _ = c4.VRS_propagation(z1_1 + z1_2)
+    c5, d5 = BS_symmetric(a5, b5, bs5)
+    b6, _ = (building_block(c5, phase2_1, phase2_2, z2_1, eta2, theta2)).VRS_propagation(z2_2)
+    c6, d6 = BS_symmetric(a6, b6, bs6)
+    det_2 = VCZT_objective_lens(c6, r, f, xout, yout)
+    
+    # Mid space:
+    a7, _ = (building_block(d4, phase4_1, phase4_2, z4_1, eta4, theta4)).VRS_propagation(z4_2)
+    a8, _ = d5.VRS_propagation(z4_1 + z4_2)
+    a9, _ = d6.VRS_propagation(z4_1 + z4_2)
+    
+    # 3rd row
+    c7, d7 = BS_symmetric(a7, ls6, bs7)
+    b8, _ = c7.VRS_propagation(z1_1 + z1_2)
+    c8, d8 = BS_symmetric(a8, b8, bs8)
+    b9, _ = c8.VRS_propagation(z2_1 + z2_2)
+    c9, d9 = BS_symmetric(a9, b9, bs9)
+    det_3 = VCZT_objective_lens(c9, r, f, xout, yout)
+    
+    # Detector row:
+    det_4 = VCZT_objective_lens(d7, r, f, xout, yout)
+    
+    det_5 = VCZT_objective_lens(d8, r, f, xout, yout)
+    
+    det_6 = VCZT_objective_lens(d9, r, f, xout, yout)
+    
+    # Array of detector information
+    detector_array = [det_1, det_2, det_3, det_4, det_5, det_6]
+    
+    i1 = jnp.abs(det_1.Ez)**2
+    i2 = jnp.abs(det_2.Ez)**2
+    i3 = jnp.abs(det_3.Ez)**2
+    i4 = jnp.abs(det_4.Ez)**2
+    i5 = jnp.abs(det_5.Ez)**2
+    i6 = jnp.abs(det_6.Ez)**2
+    
+    # Array with specific z-intensities
+    intensities = jnp.stack([i1, i2, i3, i4, i5, i6])
+    
+    return intensities, detector_array
+
+def hybrid_setup_sharp_focus(ls1, ls2, ls3, ls4, ls5, ls6, parameters, fixed_params, distance_offset = 8.9):
+    """
+    ++++++++
+    For Dorn, Quabis, Leuchs benchmark: ls1, ls2, ls3, ls4, ls5, ls6 (650 nm)
+    ++++++++
+    
+    Scheme:
+            ls1                       ls2                      ls3
+             |                         |                        |
+             |                         |                        |
+             v                         v                        v    
+    ls4 --> [BS] --> [BB 1] -- z1 --> [BS] --- z2_1 + z2_2 --> [BS] --- z3_1 + z3_2 ---> OL --> Detector 1
+             |                         |                        |
+             |                         z4                       z4             
+             |                         |                        |
+             v                         v                        v    
+    ls5 --> [BS] --> z1_1 + z1_2 ---> [BS] --> [BB 2]-- z2 --> [BS] --- z3_1 + z3_2 ---> OL --> Detector 2
+             |                         |                        |
+             |                         z5                       z5             
+             |                         |                        |
+             v                         v                        v      
+    ls6 --> [BS] --- z1_1 + z1_2 ---> [BS] --- z2_1 + z2_2 --> [BS] --> [BB 3] -- z3 --> OL --> Detector 3
+             |                         |                        |        
+             |                         |                        |
+             v                         v                        v    
+             OL                        OL                       OL
+             |                         |                        |
+             v                         v                        v    
+           Detector 4                Detector 5              Detector 6
+    
+    
+    Parameters: 
+        ls1, ls2, ..., ls6 (PolarizedLightSource)
+        parameters (jnp.array): parameters to pass to the optimizer
+            BB 1: [phase1_1, phase1_2, eta1, theta1, z1_1, z1_2]
+            BB 2: [phase2_1, phase2_2, eta2, theta2, z2_1, z2_2] 
+            BB 3: [phase3_1, phase3_2, eta3, theta3, z3_1, z3_2]
+            BS ratios: [bs1, bs2, bs3, bs4, bs5, bs6, bs7, bs8, bs9]
+            Extra distances: [z4, z5]
+        fixed_params (jnp.array): parameters to maintain fixed during optimization [r, f, xout and yout]; that is radius and focal length of the objective lens.
+        distance_offset (float): From get_VRS_minimum() estimate the 'offset'.
+    
+    Returns:
+        i1, i2, i3, i4, i5 (jnp.array): Detected intensities
+    """
+    # Get fixed params:
+    r=fixed_params[0]
+    f=fixed_params[1]
+    xout=fixed_params[2]
+    yout=fixed_params[3]
+    
+    # Extract params:
+    # 1st bulding block:
+    phase1_1 = parameters[0]* 2*jnp.pi - jnp.pi
+    phase1_2 = parameters[1]* 2*jnp.pi - jnp.pi
+    eta1 = parameters[2]* 2*jnp.pi - jnp.pi
+    theta1 = parameters[3]* 2*jnp.pi - jnp.pi
+    z1_1 = (jnp.abs(parameters[4]) * 100 + distance_offset)*cm
+    z1_2 = (jnp.abs(parameters[5]) * 100 + distance_offset)*cm
+    
+    # 2nd building block:
+    phase2_1 = parameters[6]* 2*jnp.pi - jnp.pi
+    phase2_2 = parameters[7]* 2*jnp.pi - jnp.pi
+    eta2 = parameters[8]* 2*jnp.pi - jnp.pi
+    theta2 = parameters[9]* 2*jnp.pi - jnp.pi
+    z2_1 = (jnp.abs(parameters[10]) * 100 + distance_offset)*cm
+    z2_2 = (jnp.abs(parameters[11]) * 100 + distance_offset)*cm
+    
+    # 3rd building block:
+    phase3_1 = parameters[12]* 2*jnp.pi - jnp.pi
+    phase3_2 = parameters[13]* 2*jnp.pi - jnp.pi
+    eta3 = parameters[14]* 2*jnp.pi - jnp.pi
+    theta3 = parameters[15]* 2*jnp.pi - jnp.pi
+    z3_1 = (jnp.abs(parameters[16]) * 100 + distance_offset)*cm
+    z3_2 = (jnp.abs(parameters[17]) * 100 + distance_offset)*cm
+    
+    # Beam splitter ratios (theta: raw input from (0,1) to (-pi, pi)) 
+    bs1 = parameters[18]* 2*jnp.pi - jnp.pi
+    bs2 = parameters[19]* 2*jnp.pi - jnp.pi
+    bs3 = parameters[20]* 2*jnp.pi - jnp.pi
+    bs4 = parameters[21]* 2*jnp.pi - jnp.pi
+    bs5 = parameters[22]* 2*jnp.pi - jnp.pi
+    bs6 = parameters[23]* 2*jnp.pi - jnp.pi
+    bs7 = parameters[24]* 2*jnp.pi - jnp.pi
+    bs8 = parameters[25]* 2*jnp.pi - jnp.pi
+    bs9 = parameters[26]* 2*jnp.pi - jnp.pi
+    
+    # Extra distances:
+    z4 = (jnp.abs(parameters[27]) * 100 + distance_offset)*cm
+    z5 = (jnp.abs(parameters[28]) * 100 + distance_offset)*cm
+    
+    # 1st row
+    c1, d1 = BS_symmetric(ls1, ls4, bs1)
+    b2, _ = (building_block(c1, phase1_1, phase1_2, z1_1, eta1, theta1)).VRS_propagation(z1_2)
+    c2, d2 = BS_symmetric(ls2, b2, bs2)
+    b3, _ = c2.VRS_propagation(z2_1+z2_2)
+    c3, d3 = BS_symmetric(ls3, b3, bs3)
+    b_det1, _ = c3.VRS_propagation(z3_1+z3_2)
+    det_1 = VCZT_objective_lens(b_det1, r, f, xout, yout)
+    
+    # Mid space:
+    a5, _ = d2.VRS_propagation(z4)
+    a6, _ = d3.VRS_propagation(z4)
+    
+    # 2nd row
+    c4, d4 = BS_symmetric(d1, ls5, bs4)
+    b5, _ = c4.VRS_propagation(z1_1 + z1_2)
+    c5, d5 = BS_symmetric(a5, b5, bs5)
+    b6, _ = (building_block(c5, phase2_1, phase2_2, z2_1, eta2, theta2)).VRS_propagation(z2_2)
+    c6, d6 = BS_symmetric(a6, b6, bs6)
+    b_det2, _ = c6.VRS_propagation(z3_1 + z3_2)
+    det_2 = VCZT_objective_lens(b_det2, r, f, xout, yout)
+    
+    # Mid space:
+    a8, _ = d5.VRS_propagation(z5)
+    a9, _ = d6.VRS_propagation(z5)
+    
+    # 3rd row
+    c7, d7 = BS_symmetric(d4, ls6, bs7)
+    b8, _ = c7.VRS_propagation(z1_1 + z1_2)
+    c8, d8 = BS_symmetric(a8, b8, bs8)
+    b9, _ = c8.VRS_propagation(z2_1 + z2_2)
+    c9, d9 = BS_symmetric(a9, b9, bs9)
+    b_det3, _ = (building_block(c9, phase3_1, phase3_2, z3_1, eta3, theta3)).VRS_propagation(z3_2)
+    det_3 = VCZT_objective_lens(b_det3, r, f, xout, yout)
+    
+    # Detector row:
+    det_4 = VCZT_objective_lens(d7, r, f, xout, yout)
+    
+    det_5 = VCZT_objective_lens(d8, r, f, xout, yout)
+    
+    det_6 = VCZT_objective_lens(d9, r, f, xout, yout)
+    
+    # Array of detector information
+    detector_array = [det_1, det_2, det_3, det_4, det_5, det_6]
+    
+    i1 = jnp.abs(det_1.Ez)**2
+    i2 = jnp.abs(det_2.Ez)**2
+    i3 = jnp.abs(det_3.Ez)**2
+    i4 = jnp.abs(det_4.Ez)**2
+    i5 = jnp.abs(det_5.Ez)**2
+    i6 = jnp.abs(det_6.Ez)**2
+    
+    # Array with specific z-intensities
+    intensities = jnp.stack([i1, i2, i3, i4, i5, i6])
+    
+    return intensities, detector_array
+
+def hybrid_setup_fluorophores(ls1, ls2, ls3, ls4, ls5, ls6, parameters, fixed_params, distance_offset = 8.9):
+    """
+    [hybrid_setup with fluorophores] - STED-like
+    
+    Scheme:
+            ls1                       ls2                      ls3
+             |                         |                        |
+             |                         |                        |
+             v                         v                        v    
+    ls4 --> [BS] --> [BB 1] -- z1 --> [BS] --- z2_1 + z2_2 --> [BS] --- z3_1 + z3_2 ---> OL --> Detector 1
+             |                         |                        |
+             |                         z4                       z4             
+             |                         |                        |
+             v                         v                        v    
+    ls5 --> [BS] --> z1_1 + z1_2 ---> [BS] --> [BB 2]-- z2 --> [BS] --- z3_1 + z3_2 ---> OL --> Detector 2
+             |                         |                        |
+             |                         z5                       z5             
+             |                         |                        |
+             v                         v                        v      
+    ls6 --> [BS] --- z1_1 + z1_2 ---> [BS] --- z2_1 + z2_2 --> [BS] --> [BB 3] -- z3 --> OL --> Detector 3
+             |                         |                        |        
+             |                         |                        |
+             v                         v                        v    
+             OL                        OL                       OL
+             |                         |                        |
+             v                         v                        v    
+           Detector 4                Detector 5              Detector 6
+    
+    
+    ls1, ls2, ..., ls6 (PolarizedLightSource)
+    parameters (jnp.array): parameters to pass to the optimizer
+    
+        BB 1: [_,_, eta1, theta1, z1_1, z1_2]
+        BB 2: [_,_, eta2, theta2, z2_1, z2_2] 
+        BB 3: [phase3_1, phase3_2, eta3, theta3, z3_1, z3_2]
+        BS ratios: [bs1, bs2, bs3, bs4, bs5, bs6, bs7, bs8, bs9]
+        Extra distances: z4, z5
+        
+    fixed_params (jnp.array): parameters to maintain fixed during optimization [r, f, xout and yout]; that is radius and focal length of the objective lens.
+    
+    Returns:
+        intensities (jnp.array): stack of i1, i2, i3, i4, i5 effective detected intensities
+    """
+    
+    # Get fixed params:
+    r=fixed_params[0]
+    f=fixed_params[1]
+    xout=fixed_params[2]
+    yout=fixed_params[3]
+    
+    # Extract params:
+    # 1st bulding block:
+    phase1_1 = parameters[0]* 2*jnp.pi - jnp.pi
+    phase1_2 = parameters[1]* 2*jnp.pi - jnp.pi
+    eta1 = parameters[2]* 2*jnp.pi - jnp.pi
+    theta1 = parameters[3]* 2*jnp.pi - jnp.pi
+    z1_1 = (jnp.abs(parameters[4]) * 100 + distance_offset)*cm
+    z1_2 = (jnp.abs(parameters[5]) * 100 + distance_offset)*cm
+    
+    # 2nd building block:
+    phase2_1 = parameters[6]* 2*jnp.pi - jnp.pi
+    phase2_2 = parameters[7]* 2*jnp.pi - jnp.pi
+    eta2 = parameters[8]* 2*jnp.pi - jnp.pi
+    theta2 = parameters[9]* 2*jnp.pi - jnp.pi
+    z2_1 = (jnp.abs(parameters[10]) * 100 + distance_offset)*cm
+    z2_2 = (jnp.abs(parameters[11]) * 100 + distance_offset)*cm
+    
+    # 3rd building block:
+    phase3_1 = parameters[12]* 2*jnp.pi - jnp.pi
+    phase3_2 = parameters[13]* 2*jnp.pi - jnp.pi
+    eta3 = parameters[14]* 2*jnp.pi - jnp.pi
+    theta3 = parameters[15]* 2*jnp.pi - jnp.pi
+    z3_1 = (jnp.abs(parameters[16]) * 100 + distance_offset)*cm
+    z3_2 = (jnp.abs(parameters[17]) * 100 + distance_offset)*cm
+    
+    # Beam splitter ratios (theta: raw input from (0,1) to (-pi, pi)) 
+    bs1 = parameters[18]* 2*jnp.pi - jnp.pi
+    bs2 = parameters[19]* 2*jnp.pi - jnp.pi
+    bs3 = parameters[20]* 2*jnp.pi - jnp.pi
+    bs4 = parameters[21]* 2*jnp.pi - jnp.pi
+    bs5 = parameters[22]* 2*jnp.pi - jnp.pi
+    bs6 = parameters[23]* 2*jnp.pi - jnp.pi
+    bs7 = parameters[24]* 2*jnp.pi - jnp.pi
+    bs8 = parameters[25]* 2*jnp.pi - jnp.pi
+    bs9 = parameters[26]* 2*jnp.pi - jnp.pi
+    
+    # Extra distances:
+    z4 = (jnp.abs(parameters[27]) * 100 + distance_offset)*cm
+    z5 = (jnp.abs(parameters[28]) * 100 + distance_offset)*cm
+    
+    # 1st row: _r (red light), _g (green light); BS (a, b) -> c d 
+    c1_r, d1_r = BS_symmetric_SI(ls1, bs1, port=0)
+    c1_g, d1_g = BS_symmetric_SI(ls4, bs1, port=1)
+    
+    b2_r, _ = (building_block(c1_r, phase1_1, phase1_2, z1_1, eta1, theta1)).VRS_propagation(z1_2)
+    b2_g, _ = (building_block(c1_g, phase1_1, phase1_2, z1_1, eta1, theta1)).VRS_propagation(z1_2)
+
+    c2_r, d2_r = BS_symmetric_SI(b2_r, bs2, port=1)
+    c2_g, d2_g = BS_symmetric(ls2, b2_g, bs2)
+    
+    b3_r, _ = c2_r.VRS_propagation(z2_1+z2_2)
+    b3_g, _ = c2_g.VRS_propagation(z2_1+z2_2)
+    
+    c3_r, d3_r = BS_symmetric(ls3, b3_r, bs3)
+    c3_g, d3_g = BS_symmetric_SI(b3_g, bs3, port=1)
+    
+    b_det1_r, _ = c3_r.VRS_propagation(z3_1+z3_2)
+    b_det1_g, _ = c3_g.VRS_propagation(z3_1+z3_2)
+    
+    det_1_r = VCZT_objective_lens(b_det1_r, r, f, xout, yout)
+    det_1_g = VCZT_objective_lens(b_det1_g, r, f, xout, yout)
+    
+    # Mid space:
+    a5_r, _ = d2_r.VRS_propagation(z4)
+    a5_g, _ = d2_g.VRS_propagation(z4)
+    a6_r, _ = d3_r.VRS_propagation(z4)
+    a6_g, _ = d3_g.VRS_propagation(z4)
+    
+    # 2nd row
+    c4_r, d4_r = BS_symmetric(d1_r, ls5, bs4)
+    c4_g, d4_g = BS_symmetric_SI(d1_g, bs4, port=0)
+    
+    b5_r, _ = c4_r.VRS_propagation(z1_1 + z1_2)
+    b5_g, _ = c4_g.VRS_propagation(z1_1 + z1_2)
+    
+    c5_r, d5_r = BS_symmetric(a5_r, b5_r, bs5)
+    c5_g, d5_g = BS_symmetric(a5_g, b5_g, bs5)
+    
+    b6_r, _ = (building_block(c5_r, phase2_1, phase2_2, z2_1, eta2, theta2)).VRS_propagation(z2_2)
+    b6_g, _ = (building_block(c5_g, phase2_1, phase2_2, z2_1, eta2, theta2)).VRS_propagation(z2_2)
+    
+    c6_r, d6_r = BS_symmetric(a6_r, b6_r, bs6)
+    c6_g, d6_g = BS_symmetric(a6_g, b6_g, bs6)
+    
+    b_det2_r, _ = c6_r.VRS_propagation(z3_1 + z3_2)
+    b_det2_g, _ = c6_g.VRS_propagation(z3_1 + z3_2)
+    
+    det_2_r = VCZT_objective_lens(b_det2_r, r, f, xout, yout)
+    det_2_g = VCZT_objective_lens(b_det2_g, r, f, xout, yout)
+    
+    # Mid space:
+    a8_r, _ = d5_r.VRS_propagation(z5)
+    a8_g, _ = d5_g.VRS_propagation(z5)
+    
+    a9_r, _ = d6_r.VRS_propagation(z5)
+    a9_g, _ = d6_g.VRS_propagation(z5)
+    
+    # 3rd row
+    c7_r, d7_r = BS_symmetric_SI(d4_r, bs7, port=0)
+    c7_g, d7_g = BS_symmetric(d4_g, ls6, bs7)
+    
+    b8_r, _ = c7_r.VRS_propagation(z1_1 + z1_2)
+    b8_g, _ = c7_g.VRS_propagation(z1_1 + z1_2)
+    
+    c8_r, d8_r = BS_symmetric(a8_r, b8_r, bs8)
+    c8_g, d8_g = BS_symmetric(a8_g, b8_g, bs8)
+    
+    b9_r, _ = c8_r.VRS_propagation(z2_1 + z2_2)
+    b9_g, _ = c8_g.VRS_propagation(z2_1 + z2_2)
+    
+    c9_r, d9_r = BS_symmetric(a9_r, b9_r, bs9)
+    c9_g, d9_g = BS_symmetric(a9_g, b9_g, bs9)
+    
+    b_det3_r, _ = (building_block(c9_r, phase3_1, phase3_2, z3_1, eta3, theta3)).VRS_propagation(z3_2)
+    b_det3_g, _ = (building_block(c9_g, phase3_1, phase3_2, z3_1, eta3, theta3)).VRS_propagation(z3_2)
+    
+    det_3_r = VCZT_objective_lens(b_det3_r, r, f, xout, yout)
+    det_3_g = VCZT_objective_lens(b_det3_g, r, f, xout, yout)
+    
+    # Detector row:
+    det_4_r = VCZT_objective_lens(d7_r, r, f, xout, yout)
+    det_4_g = VCZT_objective_lens(d7_g, r, f, xout, yout)
+    
+    det_5_r = VCZT_objective_lens(d8_r, r, f, xout, yout)
+    det_5_g = VCZT_objective_lens(d8_g, r, f, xout, yout)
+    
+    det_6_r = VCZT_objective_lens(d9_r, r, f, xout, yout)
+    det_6_g = VCZT_objective_lens(d9_g, r, f, xout, yout)
+    
+    # Array of detector information
+    # detector_array = [det_1, det_2, det_3, det_4, det_5, det_6]
+    i1_ex = jnp.abs(det_1_g.Ex)**2 + jnp.abs(det_1_g.Ey)**2# + jnp.abs(det_1_g.Ez)**2
+    i2_ex = jnp.abs(det_2_g.Ex)**2 + jnp.abs(det_2_g.Ey)**2# + jnp.abs(det_2_g.Ez)**2
+    i3_ex = jnp.abs(det_3_g.Ex)**2 + jnp.abs(det_3_g.Ey)**2# + jnp.abs(det_3_g.Ez)**2
+    i4_ex = jnp.abs(det_4_g.Ex)**2 + jnp.abs(det_4_g.Ey)**2# + jnp.abs(det_4_g.Ez)**2
+    i5_ex = jnp.abs(det_5_g.Ex)**2 + jnp.abs(det_5_g.Ey)**2# + jnp.abs(det_5_g.Ez)**2
+    i6_ex = jnp.abs(det_6_g.Ex)**2 + jnp.abs(det_6_g.Ey)**2# + jnp.abs(det_6_g.Ez)**2
+    
+    i1_dep = jnp.abs(det_1_r.Ex)**2 + jnp.abs(det_1_r.Ey)**2# + jnp.abs(det_1_r.Ez)**2
+    i2_dep = jnp.abs(det_2_r.Ex)**2 + jnp.abs(det_2_r.Ey)**2# + jnp.abs(det_2_r.Ez)**2
+    i3_dep = jnp.abs(det_3_r.Ex)**2 + jnp.abs(det_3_r.Ey)**2# + jnp.abs(det_3_r.Ez)**2
+    i4_dep = jnp.abs(det_4_r.Ex)**2 + jnp.abs(det_4_r.Ey)**2# + jnp.abs(det_4_r.Ez)**2
+    i5_dep = jnp.abs(det_5_r.Ex)**2 + jnp.abs(det_5_r.Ey)**2# + jnp.abs(det_5_r.Ez)**2
+    i6_dep = jnp.abs(det_6_r.Ex)**2 + jnp.abs(det_6_r.Ey)**2# + jnp.abs(det_6_r.Ez)**2
+    
+    # Array with intensities
+    iex = jnp.stack([i1_ex/jnp.sum(i1_ex), i2_ex/jnp.sum(i2_ex), i3_ex/jnp.sum(i3_ex), i4_ex/jnp.sum(i4_ex), i5_ex/jnp.sum(i5_ex), i6_ex/jnp.sum(i6_ex)])
+    idep = jnp.stack([i1_dep/jnp.sum(i1_dep), i2_dep/jnp.sum(i2_dep), i3_dep/jnp.sum(i3_dep), i4_dep/jnp.sum(i4_dep), i5_dep/jnp.sum(i5_dep), i6_dep/jnp.sum(i6_dep)])                       
+    # Resulting STED-like beam
+    i_eff = vectorized_fluorophores(iex, idep)
+    
+    return i_eff
+
+
+def six_times_six_ansatz(ls1, ls2, ls3, ls4, ls5, ls6, ls7, ls8, ls9, ls10, ls11, ls12, parameters, fixed_params, distance_offset = 7.6):
+    """
+    ++++++++
+    6x6 grid:
+        12 light sources,
+        36 BS,
+        2 super slms (i.e., 4 slms with fixed PM),
+        2 waveplates
+        
+    Look for Dorn, Quabis, Leuchs benchmark: ls1-ls12 (635 nm)
+    ++++++++
+   
+    Parameters: 
+        ls1, ls2, ..., ls12 (PolarizedLightSource)
+        parameters (jnp.array): parameters to pass to the optimizer
+            BS ratios: [bs1 - bs36]
+            Distances: [z1 - z12]
+            Waveplate angles: [eta1, theta1, eta2, theta2]
+        fixed_params (jnp.array): parameters to maintain fixed during optimization [r, f, xout, yout, PM1, PM2, PM3 and PM4]; 
+        that is radius and focal length of the objective lens, XY out and phase masks 1-4.
+        distance_offset (float): From get_VRS_minimum() estimate the 'offset'.
+    
+    Returns:
+        i1, i2, i3, i4, i5, i6 (jnp.array): Detected intensities
+    """
+    # Get fixed params:
+    r=fixed_params[0]
+    f=fixed_params[1]
+    xout=fixed_params[2]
+    yout=fixed_params[3]
+    
+    # Dorn, Quabis, Leuchs PM:
+    phase1_1 = fixed_params[4]
+    phase1_2 = fixed_params[5]
+    # Ladder grating
+    phase2_1 = fixed_params[6]
+    phase2_2 = fixed_params[7]
+    
+    # Distances
+    z1 = (jnp.abs(parameters[0]) * 100 + distance_offset)*cm
+    z2 = (jnp.abs(parameters[1]) * 100 + distance_offset)*cm
+    z3 = (jnp.abs(parameters[2]) * 100 + distance_offset)*cm
+    z4 = (jnp.abs(parameters[3]) * 100 + distance_offset)*cm
+    z5 = (jnp.abs(parameters[4]) * 100 + distance_offset)*cm
+    z6 = (jnp.abs(parameters[5]) * 100 + distance_offset)*cm
+    z7 = (jnp.abs(parameters[6]) * 100 + distance_offset)*cm
+    z8 = (jnp.abs(parameters[7]) * 100 + distance_offset)*cm
+    z9 = (jnp.abs(parameters[8]) * 100 + distance_offset)*cm
+    z10 = (jnp.abs(parameters[9]) * 100 + distance_offset)*cm
+    z11 = (jnp.abs(parameters[10]) * 100 + distance_offset)*cm
+    z12 = (jnp.abs(parameters[11]) * 100 + distance_offset)*cm
+    
+    # Beam splitter ratios (theta: raw input from (0,1) to (-pi, pi)) 
+    bs1 = parameters[12]* 2*jnp.pi - jnp.pi
+    bs2 = parameters[13]* 2*jnp.pi - jnp.pi
+    bs3 = parameters[14]* 2*jnp.pi - jnp.pi
+    bs4 = parameters[15]* 2*jnp.pi - jnp.pi
+    bs5 = parameters[16]* 2*jnp.pi - jnp.pi
+    bs6 = parameters[17]* 2*jnp.pi - jnp.pi
+    bs7 = parameters[18]* 2*jnp.pi - jnp.pi
+    bs8 = parameters[19]* 2*jnp.pi - jnp.pi
+    bs9 = parameters[20]* 2*jnp.pi - jnp.pi
+    bs10 = parameters[21]* 2*jnp.pi - jnp.pi
+    bs11 = parameters[22]* 2*jnp.pi - jnp.pi
+    bs12 = parameters[23]* 2*jnp.pi - jnp.pi
+    bs13 = parameters[24]* 2*jnp.pi - jnp.pi
+    bs14 = parameters[25]* 2*jnp.pi - jnp.pi
+    bs15 = parameters[26]* 2*jnp.pi - jnp.pi
+    bs16 = parameters[27]* 2*jnp.pi - jnp.pi
+    bs17 = parameters[28]* 2*jnp.pi - jnp.pi
+    bs18 = parameters[29]* 2*jnp.pi - jnp.pi
+    bs19 = parameters[30]* 2*jnp.pi - jnp.pi
+    bs20 = parameters[31]* 2*jnp.pi - jnp.pi
+    bs21 = parameters[32]* 2*jnp.pi - jnp.pi
+    bs22 = parameters[33]* 2*jnp.pi - jnp.pi
+    bs23 = parameters[34]* 2*jnp.pi - jnp.pi
+    bs24 = parameters[35]* 2*jnp.pi - jnp.pi
+    bs25 = parameters[36]* 2*jnp.pi - jnp.pi
+    bs26 = parameters[37]* 2*jnp.pi - jnp.pi
+    bs27 = parameters[38]* 2*jnp.pi - jnp.pi
+    bs28 = parameters[39]* 2*jnp.pi - jnp.pi
+    bs29 = parameters[40]* 2*jnp.pi - jnp.pi
+    bs30 = parameters[41]* 2*jnp.pi - jnp.pi
+    bs31 = parameters[42]* 2*jnp.pi - jnp.pi
+    bs32 = parameters[43]* 2*jnp.pi - jnp.pi
+    bs33 = parameters[44]* 2*jnp.pi - jnp.pi
+    bs34 = parameters[45]* 2*jnp.pi - jnp.pi
+    bs35 = parameters[46]* 2*jnp.pi - jnp.pi
+    bs36 = parameters[47]* 2*jnp.pi - jnp.pi
+
+    # LCDs:
+    eta1   = parameters[48]* 2*jnp.pi - jnp.pi
+    theta1 = parameters[49]* 2*jnp.pi - jnp.pi
+    eta2   = parameters[50]* 2*jnp.pi - jnp.pi
+    theta2 = parameters[51]* 2*jnp.pi - jnp.pi
+    
+    # 1st row and mid space
+    c1, d1 = BS_symmetric(ls1, ls7, bs1)
+    b2, _ = c1.VRS_propagation(z1)
+    a7, _ = d1.VRS_propagation(z8)
+    
+    c2, d2 = BS_symmetric(ls2, b2, bs2)
+    b3, _ = c2.VRS_propagation(z2+z3)
+    a8, _ = d2.VRS_propagation(z8)
+    
+    c3, d3 = BS_symmetric(ls3, b3, bs3)
+    b4, _ = c3.VRS_propagation(z4)
+    a9, _ = d3.VRS_propagation(z8)
+    
+    c4, d4 = BS_symmetric(ls4, b4, bs4)
+    b5, _ = c4.VRS_propagation(z5+z6)
+    a10, _ = d4.VRS_propagation(z8)
+    
+    c5, d5 = BS_symmetric(ls5, b5, bs5)
+    b6, _ = c5.VRS_propagation(z7)
+    a11, _ = d5.VRS_propagation(z8)
+    
+    c6, d6 = BS_symmetric(ls6, b6, bs6)
+    a12, _ = d6.VRS_propagation(z8)
+    det_1 = VCZT_objective_lens(c6, r, f, xout, yout)
+    
+    # 2nd row and mid space
+    c7, d7 = BS_symmetric(a7, ls8, bs7)
+    b8, _ = c7.VRS_propagation(z1)
+    a13, _ = d7.VRS_propagation(z9)
+    
+    c8, d8 = BS_symmetric(a8, b8, bs8)
+    b9, _ = (building_block(c8, phase1_1, phase1_2, z2, eta1, theta1)).VRS_propagation(z3)    
+    a14, _ = d8.VRS_propagation(z9)
+    
+    c9, d9 = BS_symmetric(a9, b9, bs9)
+    b10, _ = c9.VRS_propagation(z4)
+    a15, _ = d9.VRS_propagation(z9)
+    
+    c10, d10 = BS_symmetric(a10, b10, bs10)
+    b11, _ = c10.VRS_propagation(z5+z6)
+    a16, _ = d10.VRS_propagation(z9)
+    
+    c11, d11 = BS_symmetric(a11, b11, bs11)
+    b12, _ = c11.VRS_propagation(z7)
+    a17, _ = d11.VRS_propagation(z9)
+    
+    c12, d12 = BS_symmetric(a12, b12, bs12)
+    a18, _ = d12.VRS_propagation(z9)
+    det_2 = VCZT_objective_lens(c12, r, f, xout, yout)
+
+    # 3rd row and mid space
+    c13, d13 = BS_symmetric(a13, ls9, bs13)
+    b14, _ = c13.VRS_propagation(z1)
+    a19, _ = d13.VRS_propagation(z10)
+    
+    c14, d14 = BS_symmetric(a14, b14, bs14)
+    b15, _ = c14.VRS_propagation(z2+z3)
+    a20, _ = d14.VRS_propagation(z10)
+    
+    c15, d15 = BS_symmetric(a15, b15, bs15)
+    b16, _ = c15.VRS_propagation(z4)
+    a21, _ = d15.VRS_propagation(z10)
+    
+    c16, d16 = BS_symmetric(a16, b16, bs16)
+    b17, _ = c16.VRS_propagation(z5+z6)
+    a22, _ = d16.VRS_propagation(z10)
+    
+    c17, d17 = BS_symmetric(a17, b17, bs17)
+    b18, _ = c17.VRS_propagation(z7)
+    a23, _ = d17.VRS_propagation(z10)
+    
+    c18, d18 = BS_symmetric(a18, b18, bs18)
+    a24, _ = d18.VRS_propagation(z10)
+    det_3 = VCZT_objective_lens(c18, r, f, xout, yout)
+    
+    # 4th row and mid space
+    c19, d19 = BS_symmetric(a19, ls10, bs19)
+    b20, _ = c19.VRS_propagation(z1)
+    a25, _ = d19.VRS_propagation(z11)
+    
+    c20, d20 = BS_symmetric(a20, b20, bs20)
+    b21, _ = c20.VRS_propagation(z2+z3)
+    a26, _ = d20.VRS_propagation(z11)
+    
+    c21, d21 = BS_symmetric(a21, b21, bs21)
+    b22, _ = c21.VRS_propagation(z4)
+    a27, _ = d21.VRS_propagation(z11)
+    
+    c22, d22 = BS_symmetric(a22, b22, bs22)
+    b23, _ = (building_block(c22, phase2_1, phase2_2, z5, eta2, theta2)).VRS_propagation(z6)    
+    a28, _ = d22.VRS_propagation(z11)
+    
+    c23, d23 = BS_symmetric(a23, b23, bs23)
+    b24, _ = c23.VRS_propagation(z7)
+    a29, _ = d23.VRS_propagation(z11)
+    
+    c24, d24 = BS_symmetric(a24, b24, bs24)
+    a30, _ = d24.VRS_propagation(z11)
+    det_4 = VCZT_objective_lens(c24, r, f, xout, yout)
+    
+    # 5th row and mid space
+    c25, d25 = BS_symmetric(a25, ls11, bs25)
+    b26, _ = c25.VRS_propagation(z1)
+    a31, _ = d25.VRS_propagation(z12)
+    
+    c26, d26 = BS_symmetric(a26, b26, bs26)
+    b27, _ = c26.VRS_propagation(z2+z3)
+    a32, _ = d26.VRS_propagation(z12)
+    
+    c27, d27 = BS_symmetric(a27, b27, bs27)
+    b28, _ = c27.VRS_propagation(z4)
+    a33, _ = d27.VRS_propagation(z12)
+    
+    c28, d28 = BS_symmetric(a28, b28, bs28)
+    b29, _ = c28.VRS_propagation(z5+z6)
+    a34, _ = d28.VRS_propagation(z12)
+    
+    c29, d29 = BS_symmetric(a29, b29, bs29)
+    b30, _ = c29.VRS_propagation(z7)
+    a35, _ = d29.VRS_propagation(z12)
+    
+    c30, d30 = BS_symmetric(a30, b30, bs30)
+    a36, _ = d30.VRS_propagation(z12)
+    det_5 = VCZT_objective_lens(c30, r, f, xout, yout)
+
+    # 6th row and mid space
+    c31, d31 = BS_symmetric(a31, ls12, bs31)
+    b32, _ = c31.VRS_propagation(z1)
+    det_7 = VCZT_objective_lens(c31, r, f, xout, yout)
+    
+    c32, d32 = BS_symmetric(a32, b32, bs32)
+    b33, _ = c32.VRS_propagation(z2+z3)
+    det_8 = VCZT_objective_lens(c32, r, f, xout, yout)
+    
+    c33, d33 = BS_symmetric(a33, b33, bs33)
+    b34, _ = c33.VRS_propagation(z4)
+    det_9 = VCZT_objective_lens(c33, r, f, xout, yout)
+    
+    c34, d34 = BS_symmetric(a34, b34, bs34)
+    b35, _ = c34.VRS_propagation(z5+z6)
+    det_10 = VCZT_objective_lens(c34, r, f, xout, yout)
+    
+    c35, d35 = BS_symmetric(a35, b35, bs35)
+    b36, _ = c35.VRS_propagation(z7)
+    det_11 = VCZT_objective_lens(c35, r, f, xout, yout)
+
+    c36, d36 = BS_symmetric(a36, b36, bs36)
+    det_6 = VCZT_objective_lens(c36, r, f, xout, yout)
+    det_12 = VCZT_objective_lens(d36, r, f, xout, yout)
+    
+    # Array of detector information
+    # detector_array = [det_1, det_2, det_3, det_4, det_5, det_6, det_7, det_8, det_9, det_10, det_11, det_12]
+    
+    i1 = jnp.abs(det_1.Ez)**2
+    i2 = jnp.abs(det_2.Ez)**2
+    i3 = jnp.abs(det_3.Ez)**2
+    i4 = jnp.abs(det_4.Ez)**2
+    i5 = jnp.abs(det_5.Ez)**2
+    i6 = jnp.abs(det_6.Ez)**2
+    i7 = jnp.abs(det_7.Ez)**2
+    i8 = jnp.abs(det_8.Ez)**2
+    i9 = jnp.abs(det_9.Ez)**2
+    i10 = jnp.abs(det_10.Ez)**2
+    i11 = jnp.abs(det_11.Ez)**2
+    i12 = jnp.abs(det_12.Ez)**2
+    
+    # Array with specific z-intensities
+    intensities = jnp.stack([i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12])
+    
+    return intensities #, detector_array
+
+
+
+
 
 def xl_setup(ls1, ls2, parameters, fixed_params):
     """
