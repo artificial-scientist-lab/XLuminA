@@ -7,6 +7,8 @@ config.update("jax_enable_x64", True)
 
 """ Loss functions:
 
+    - small_area_hybrid
+    - vectorized_loss_hybrid
     - small_area_STED
     - small_area
     - mean_batch_MSE_Intensity
@@ -18,6 +20,37 @@ config.update("jax_enable_x64", True)
     - MSE_Intensity
     
 """
+
+def small_area_hybrid(detected_intensity):
+    """
+    [Small area loss function valid for hybrid (topology + optical parameters) optimization:]
+    
+    Computes the fraction of intensity comprised inside the area of a mask.
+
+    Parameters:
+        detected_intensity (jnp.array): Detected intensity array 
+        + epsilon (float): fraction of minimum intensity comprised inside the area.
+        
+    Return type jnp.array.
+    """
+    epsilon = 0.7
+    eps = 1e-08
+    I = detected_intensity / (jnp.sum(detected_intensity) + eps)
+    mask = jnp.where(I > epsilon*jnp.max(I), 1, 0)
+    return jnp.sum(mask) / (jnp.sum(mask * I) + eps)
+
+@jit
+def vectorized_loss_hybrid(detected_intensities):
+    """[For loss_hybrid]: vectorizes loss function to be used across various detectors"""
+    # Input field has (M, N, N) shape
+    vloss = vmap(small_area_hybrid, in_axes = (0))
+    # Call the vectorized function
+    loss_val = vloss(detected_intensities)
+    # Returns (M, 1, 1) shape
+    return loss_val
+
+
+
 
 def small_area_STED(sted_i_effective):
     """
