@@ -1,5 +1,5 @@
 import jax.numpy as jnp
-from jax import config, jit, vmap
+from jax import lax, config, jit, vmap, random
 from functools import partial
 import time
 from .__init__ import um, cm
@@ -7,8 +7,10 @@ from .wave_optics import ScalarLight
 from .vectorized_optics import VectorizedLight, vectorized_CZT_for_high_NA
 from .toolbox import build_LCD_cell, rotate_mask
 
-# Comment this line if float32 is enough precision for you. 
-config.update("jax_enable_x64", True)
+# Set this to False if f64 is enough precision for you.
+enable_float64 = True
+if enable_float64:
+    config.update("jax_enable_x64", True)
 
 """ Contains optical elements:
 
@@ -20,17 +22,19 @@ config.update("jax_enable_x64", True)
         - jones_LP
         - jones_general_retarder
         - jones_sSLM
+NEW:    - jones_sSLM_with_amplitude
         - jones_LCD
     
     (3) Polarization-based devices:
         - sSLM
+NEW:    - sSLM_with_amplitude
         - LCD
         - linear_polarizer
-NEW:    - BS_symmetric 
-NEW:    - bs_port0
-NEW:    - bs_port1
-NEW:    - BS_symmetric_SI
-        - BS
+NEW:    - BS_symmetric (includes loss)
+        - bs_port0
+        - bs_port1
+NEW:    - BS_symmetric_SI (includes loss)
+        - BS 
         - high_NA_objective_lens
             + _high_NA_objective_lens_
     (3.1) Propagation methods through objective lenses:
@@ -39,6 +43,8 @@ NEW:    - BS_symmetric_SI
     
     (4) General elements:
         - lens
+NEW:    - cylindrical lens
+NEW:    - axicon_lens
         - circular_mask
         - triangular_mask
         - rectangular_mask
@@ -46,25 +52,28 @@ NEW:    - BS_symmetric_SI
         - forked_grating
     
     (5) Pre-built optical set-ups:
-        - building_block
-NEW:    - fluorescence
-NEW:    - vectorized_fluorophores
-NEW:    - hybrid_setup_fixed_slms_fluorophores
-NEW:    - hybrid_setup_fixed_slms
-NEW:    - hybrid_setup_sharp_focus
-NEW:    - hybrid_setup_fluorophores
-NEW:    - six_times_six_ansatz
-        - xl_setup
-        - vSTED
-        - sharp_focus
-        - general_setup
+NEW:    - bb_amplitude_and_phase_mod (sSLM + LCD with amplitude modulation)
+        - building_block (sSLM + LCD without amplitude modulation)
+        - fluorescence
+        - vectorized_fluorophores
+NEW:    - robust_discovery (single wavelength)
+        - hybrid_setup_fixed_slms_fluorophores
+        - hybrid_setup_fixed_slms
+        - hybrid_setup_sharp_focus
+        - hybrid_setup_fluorophores
+        - six_times_six_ansatz
+
+    (6) Add noise to the optical elements:
+NEW:    - shake_setup
+NEW:    - shake_setup_jit (to be used with @jit vmap across multiple optical tables)
+
 """
 
 # ------------------------------------------------------------------------------------------------
 
 """ (1) Scalar light devices: """
 
-def phase_scalar_SLM(phase):
+def phase_scalar_SLM(phase:float):
     """
     Phase for ScalarLight SLM. 
     
@@ -75,13 +84,14 @@ def phase_scalar_SLM(phase):
     """
     return jnp.exp(1j * phase)
 
-def SLM(input_field, phase_array, shape):
+def SLM(input_field:object, phase_array, shape:int):
     """
     SLM (spatial light modulator) for ScalarLight: applies a phase mask [pixel-wise].
     
     Parameters:
         input_field (ScalarLight): Light to be modulated.
         phase_array (jnp.array): Phase to be applied (in radians). 
+        shape (int): resolution (in pixels) of one side of the device.
     
     Returns ScalarLight after applying the transformation.
     """
@@ -97,7 +107,7 @@ def SLM(input_field, phase_array, shape):
 """ (2) Jones matrices: """
 
 @jit
-def jones_LP(alpha):
+def jones_LP(alpha:float):
     """
     Define the Jones matrix of a Linear polarizer.
 
@@ -110,7 +120,7 @@ def jones_LP(alpha):
                       [jnp.cos(alpha) * jnp.sin(alpha), jnp.sin(alpha) ** 2]])
 
 @jit
-def jones_general_retarder(eta, theta, delta):
+def jones_general_retarder(eta:float, theta:float, delta:float):
     """
     Define the Jones matrix of a general retarder.
 
@@ -129,7 +139,7 @@ def jones_general_retarder(eta, theta, delta):
                       jnp.exp(-(eta / 2) * 1j) * jnp.sin(theta) ** 2 + jnp.exp((eta / 2) * 1j) * jnp.cos(theta) ** 2]])
 
 @jit
-def jones_sSLM(alpha, phi):
+def jones_sSLM(alpha:float, phi:float):
     """
     Define the Jones matrix of the sSLM.
 
@@ -142,7 +152,22 @@ def jones_sSLM(alpha, phi):
     return jnp.array([[jnp.exp(1j * alpha), 0], [0, jnp.exp(1j * phi)]])
 
 @jit
-def jones_LCD(eta, theta):
+def jones_sSLM_with_amplitude(alpha:float, phi:float, a1:float, a2:float):
+    """
+    Define the Jones matrix of the sSLM that modulates phase & amplitude.
+
+    Parameters:
+        alpha (float): Phase mask for Ex (in radians).
+        phi (float): Phase mask for Ey (in radians).
+        a1 (float) : Amplitude mask for Ex (from 0 to 1)
+        a2 (float) : Amplitude mask for Ey (from 0 to 1)
+        
+    Returns the Jones matrix (jnp.array).
+    """
+    return jnp.array([[a1 * jnp.exp(1j * alpha), 0], [0, a2 * jnp.exp(1j * phi)]])
+
+@jit
+def jones_LCD(eta:float, theta:float):
     """
     Define the Jones matrix of LCD (liquid crystal display).
 
@@ -158,7 +183,7 @@ def jones_LCD(eta, theta):
 
 """ (3) Polarization-based devices: """
 
-def sSLM(input_field, alpha_array=None, phi_array=None):
+def sSLM(input_field:object, alpha_array=None, phi_array=None) -> object:
     """
     Define super-Spatial Light Modulator (sSLM): adds phase mask [pixel-wise] to Ex and Ey independently. 
     
@@ -196,7 +221,49 @@ def sSLM(input_field, alpha_array=None, phi_array=None):
     
     return light_out
 
-def LCD(input_field, eta, theta):
+def sSLM_with_amplitude(input_field:object, alpha_array=None, phi_array=None, A1_array=None, A2_array=None) -> object:
+    """
+    Define super-Spatial Light Modulator (sSLM):
+    
+    adds phase mask & amplitude mask [pixel-wise] to Ex and Ey independently. 
+    
+    Illustrative scheme:
+    (Ex, Ey) --> PBS --> Ex --> SLM(alpha, A1) --> Ex' --> PBS --> (Ex', Ey')
+                  |                                     ^ 
+                  v                                     |
+                  Ey --------> SLM(phi, A2) ----> Ey' --/
+
+    Parameters:
+        input_field (VectorizedLight): Light to be modulated.
+        alpha_array (jnp.array): Phase mask to be applied to Ex (in radians).
+        phi_array (jnp.array): Phase mask to be applied to Ey (in radians).
+        A1_array (jnp.array): Amplitude mask to be applied to Ex (from 0 to 1).
+        A2_array (jnp.array): Amplitude mask to be applied to Ey (from 0 to 1).
+        
+    Returns VectorizedLight after applying the transformation.
+    """
+    # Consider Ex and Ey:
+    input_field_xy = jnp.moveaxis(jnp.stack([input_field.Ex, input_field.Ey]), [0, 1, 2], [2, 0, 1])
+    shape = jnp.shape(input_field_xy)[1]
+
+    # Compute phase for each 
+    sslm = jnp.fromfunction(lambda i, j: jones_sSLM_with_amplitude(alpha_array[i, j], phi_array[i, j], A1_array[i, j], A2_array[i, j]),
+                            (shape, shape), dtype=int)
+    sslm = jnp.reshape(sslm, (shape ** 2, 2, 2))
+    field = jnp.reshape(input_field_xy, (shape ** 2, 2, 1))
+    # Phase and amplitude contained in sslm
+    field_out = sslm @ field
+    field_out = field_out.reshape(shape, shape, 2)
+    
+    light_out = VectorizedLight(input_field.x, input_field.y, input_field.wavelength)
+    light_out.Ex = field_out[:, :, 0]
+    light_out.Ey = field_out[:, :, 1]
+    # Maintain the input Ez.
+    light_out.Ez = input_field.Ez
+    
+    return light_out
+
+def LCD(input_field:object, eta:float, theta:float) -> object:
     """
     Liquid Crystal Device for VectorizedLight: builds any linear wave-plate.
     
@@ -237,7 +304,7 @@ def LCD(input_field, eta, theta):
     
     return light_out
 
-def linear_polarizer(input_field, alpha):
+def linear_polarizer(input_field:object, alpha) -> object:
     """
     Linear polarizer VectorizedLight.
     
@@ -253,7 +320,7 @@ def linear_polarizer(input_field, alpha):
     shape = jnp.shape(input_field_xy)[1]
 
     E_reshape = jnp.reshape(input_field_xy, (shape ** 2, 2, 1))
-    LP = jnp.fromfunction(lambda i, j: jones_LP(alpha[i, j]), (shape, shape), dtype=jnp.float64)
+    LP = jnp.fromfunction(lambda i, j: jones_LP(alpha[i, j]), (shape, shape), dtype=int)
     LP_reshape = jnp.reshape(LP, (shape ** 2, 2, 2))
     E_out = LP_reshape @ E_reshape
     E_out = E_out.reshape(shape, shape, 2)
@@ -264,9 +331,9 @@ def linear_polarizer(input_field, alpha):
     
     return light_out
 
-def BS_symmetric(a, b, theta):
+def BS_symmetric(a:object, b:object, theta:float) -> tuple:
     """
-    Classical lossless two-mode beam splitter of reflectance R = |sin(theta)|**2, and transmittance T = |cos(theta)|**2. 
+    Classical lossy two-mode beam splitter of reflectance R = |sin(theta)|**2, and transmittance T = |cos(theta)|**2. 
     
     Scheme:
                  a
@@ -290,6 +357,8 @@ def BS_symmetric(a, b, theta):
          
     Reflectance = R**2
     Transmissivity = T**2
+
+    Adds a pi phase: jnp.exp(1j * phase) = 1j
     
     ------------------------------------------------------------          
     
@@ -308,6 +377,11 @@ def BS_symmetric(a, b, theta):
     T = jnp.abs(jnp.cos(theta))
     R = jnp.abs(jnp.sin(theta))
     
+    noise = T*0.01 
+    
+    T = T - noise
+    R = R - noise 
+    
     c.Ex = (R * a.Ex) + (1j * T * b.Ex) 
     c.Ey = (R * a.Ey) + (1j * T * b.Ey)
 
@@ -317,7 +391,7 @@ def BS_symmetric(a, b, theta):
     return c, d
 
 @jit
-def bs_port0(a_Ex, a_Ey, c_Ex, c_Ey, d_Ex, d_Ey, T, R):
+def bs_port0(a_Ex, a_Ey, c_Ex, c_Ey, d_Ex, d_Ey, T:float, R:float) -> tuple:
     """ [For BS_symmetric_SI]: BS single input - port 0 - """
     c_Ex = (R * a_Ex) 
     c_Ey = (R * a_Ey)
@@ -326,7 +400,7 @@ def bs_port0(a_Ex, a_Ey, c_Ex, c_Ey, d_Ex, d_Ey, T, R):
     return c_Ex, c_Ey, d_Ex, d_Ey
 
 @jit
-def bs_port1(a_Ex, a_Ey, c_Ex, c_Ey, d_Ex, d_Ey, T, R):
+def bs_port1(a_Ex, a_Ey, c_Ex, c_Ey, d_Ex, d_Ey, T:float, R:float) -> tuple:
     """ [For BS_symmetric_SI]: BS single input - port 1 - """
     d_Ex = (R * a_Ex) 
     d_Ey = (R * a_Ey)
@@ -334,9 +408,9 @@ def bs_port1(a_Ex, a_Ey, c_Ex, c_Ey, d_Ex, d_Ey, T, R):
     c_Ey = (1j * T * a_Ey)
     return c_Ex, c_Ey, d_Ex, d_Ey
 
-def BS_symmetric_SI(a, theta, port=0):
+def BS_symmetric_SI(a:object, theta:float, port=0) -> tuple:
     """
-    Classical lossless single input beam splitter of reflectance R = |sin(theta)|**2, and transmittance T = |cos(theta)|**2. 
+    Classical lossy single input beam splitter of reflectance R = |sin(theta)|**2, and transmittance T = |cos(theta)|**2. 
     
     Scheme:
         a (port 0)
@@ -375,12 +449,17 @@ def BS_symmetric_SI(a, theta, port=0):
     T = jnp.abs(jnp.cos(theta))
     R = jnp.abs(jnp.sin(theta))
     
+    noise = T*0.01 
+    
+    T = T - noise
+    R = R - noise 
+    
     # Apply BS single input in a differentiable way
     c.Ex, c.Ey, d.Ex, d.Ey = lax.cond(port == 0, bs_port0, bs_port1, a.Ex, a.Ey, c.Ex, c.Ey, d.Ex, d.Ey, T, R)
     
     return c, d
 
-def BS(a1, a2, R, T, phase):
+def BS(a1:object, a2:object, R:float, T:float, phase:float) -> tuple:
     """
     Lossless two-mode beam splitter of reflectance R, and transmittance T. 
     
@@ -433,7 +512,7 @@ def BS(a1, a2, R, T, phase):
     return b1, b2
 
 
-def high_NA_objective_lens(input_field, radius, f):
+def high_NA_objective_lens(input_field:object, radius:float, f:float) -> tuple:
     """
     High NA objective lens for VectorizedLight - to be used with [VCZT_objective_lens].
     [Ref1: Opt. Comm. 283 (2010), 4859 - 4865].
@@ -518,7 +597,7 @@ def _high_NA_objective_lens_(incoming_light, theta, phi, G):
 
 """ (3.1) Propagation methods through objective lenses """
 
-def VCZT_objective_lens(input_field, r, f, xout, yout):
+def VCZT_objective_lens(input_field:object, r:float, f:float, xout, yout) -> object:
     """
     Vectorial Chirp z-transform algorithm for high NA objective lens.
     [Ref 1] Hu, Y., et al. Light Sci Appl 9, 119 (2020).
@@ -554,11 +633,11 @@ def VCZT_objective_lens(input_field, r, f, xout, yout):
     light_out.Ex = field_at_z[0, :, :]
     light_out.Ey = field_at_z[1, :, :]
     light_out.Ez = field_at_z[2, :, :]
-    print("Time taken to perform one VCZT propagation through objective lens (in seconds):", time.perf_counter() - tic)
+    print(f"Time taken to perform one VCZT propagation through objective lens (in seconds):  {(time.perf_counter() - tic):.4f}")
     
     return light_out
 
-def build_high_NA_VCZT_grid(f, r, wavelength, xin, xout, yout):
+def build_high_NA_VCZT_grid(f:float, r:float, wavelength:float, xin, xout, yout) -> tuple:
     """
     [For VCZT_objective_lens]: Defines the resolution / sampling of initial and output planes.
     
@@ -596,7 +675,7 @@ def build_high_NA_VCZT_grid(f, r, wavelength, xin, xout, yout):
 
 """ (4) General elements: """
 
-def lens(input_field, radius, focal):
+def lens(input_field:object, radius:tuple, focal:tuple) -> tuple:
     """
     Define a transparent lens of variable size (in microns) for ScalarLight / VectorizedLight.
 
@@ -623,7 +702,83 @@ def lens(input_field, radius, focal):
    
     return output, lens_
 
-def circular_mask(X, Y, r):
+def cylindrical_lens(input_field:object, focal_length:tuple, refractive_index=1.5, angle=0) -> tuple:
+    """
+    Define a transparent plano-convex cylindrical lens of variable size and rotation (in microns and radians) for ScalarLight / VectorizedLight.
+
+    Parameters:
+        input_field (light object): Incident light.
+        focal_length (float, float): Focal length of the lens (in microns).
+        n (float): Refractive index (default is 1.5)
+        angle (float): angle of rotation of coordinates -- angle = 0, phase along X axis; angle = jnp.pi/2 the phase is along Y axis. 
+    
+    Returns ScalarLight (or VectorizedLight) after applying the lens and the lens mask.
+    """
+    # Rotate coordinates
+    X, Y = input_field.X, input_field.Y
+    Xrot = X * jnp.cos(angle) + Y * jnp.sin(angle)
+    Yrot = -X * jnp.sin(angle) + Y * jnp.cos(angle)
+    
+    # Radius of the lens f=R / (n-1):
+    R = focal_length * (refractive_index - 1)
+    
+    # Thickness
+    thickness = R - jnp.sqrt(R**2 - Xrot**2) 
+    
+    # Phase shift
+    phase = input_field.k * (refractive_index - 1) * (Xrot**2 / (2 * focal_length) + thickness)
+
+    lens_mask = jnp.exp(- 1j * phase)
+
+    if input_field.info == 'Wave optics light' or input_field.info =='Wave optics light source':
+        output = ScalarLight(input_field.x, input_field.y, input_field.wavelength)
+        output.field = input_field.field * lens_mask
+        
+    elif input_field.info == 'Vectorized light' or input_field.info =='Vectorized light source':
+        output = VectorizedLight(input_field.x, input_field.y, input_field.wavelength)
+        output.Ex = input_field.Ex * lens_mask
+        output.Ey = input_field.Ey * lens_mask
+    else:
+        raise ValueError(f"Invalid input. Please use ScalarLight or VectorizedLight object.")
+   
+    return output, lens_mask
+
+def axicon_lens(input_field:object, alpha:float, n=1.5) -> tuple:
+    """
+    Axicon lens function that produces Bessel beam.
+    
+    Parameters:
+        x, y (jnp.arrays): spatial coordinates in the lens plane
+        k (float): wave number (2*pi / wavelength)
+        n (float): refractive index
+        alpha (float): angle of the axicon (in rads)
+        max_radius (float): max radius of the axicon
+    
+    Returns phase shift, radial wave vector kr (tuple) 
+    """
+    # Calculate radial distance from the center
+    r = jnp.sqrt(input_field.X**2  + input_field.Y**2)
+    
+    # Calculate the phase shift introduced by the axicon
+    phase_shift = input_field.k * r * (n - 1) * jnp.sin(alpha) * jnp.tan(alpha)
+    
+    # Apply the phase shift only within the axicon aperture
+    axicon_function = jnp.exp(- 1j * phase_shift)
+    
+    if input_field.info == 'Wave optics light' or input_field.info =='Wave optics light source':
+        output = ScalarLight(input_field.x, input_field.y, input_field.wavelength)
+        output.field = input_field.field * axicon_function
+        
+    elif input_field.info == 'Vectorized light' or input_field.info =='Vectorized light source':
+        output = VectorizedLight(input_field.x, input_field.y, input_field.wavelength)
+        output.Ex = input_field.Ex * axicon_function
+        output.Ey = input_field.Ey * axicon_function
+    else:
+        raise ValueError(f"Invalid input. Please use ScalarLight or VectorizedLight object.")
+   
+    return output, axicon_function
+
+def circular_mask(X, Y, r:tuple):
     """
     Define a circular mask of variable size (in microns).
     
@@ -639,7 +794,7 @@ def circular_mask(X, Y, r):
     
     return pupil
 
-def triangular_mask(X, Y, r, angle, m, height):
+def triangular_mask(X:tuple, Y:tuple, r:tuple, angle:float, m:float, height:float):
     """
     Define a triangular mask of variable size (in microns); equation to generate the triangle: y = -m (x - x0) + y0.
     
@@ -661,7 +816,7 @@ def triangular_mask(X, Y, r, angle, m, height):
     Y = -m * jnp.abs(Xrot - x0) + y0
     return jnp.where((Yrot < Y) & (Yrot > y0 - height), 1, 0)
 
-def rectangular_mask(X, Y, center, width, height, angle):
+def rectangular_mask(X, Y, center:tuple, width:float, height:float, angle:float):
     """
     Apply a square mask of variable size. Can generate rectangles, squares and rotate them to create diamond shapes.
     
@@ -680,7 +835,7 @@ def rectangular_mask(X, Y, center, width, height, angle):
     Xrot, Yrot = rotate_mask(X, Y, angle, center)
     return jnp.where((Xrot < (width/2)) & (Xrot > (-width/2)) & (Yrot < (height/2)) & (Yrot > (-height/2)), 1, 0)
 
-def annular_aperture(di, do, X, Y):
+def annular_aperture(di:float, do:float, X, Y):
     """
     Define annular aperture of variable size (in microns).
     
@@ -698,7 +853,7 @@ def annular_aperture(di, do, X, Y):
     ring = jnp.where(((X**2 + Y**2) / do**2) < 1, 1, 0)
     return stop*ring
 
-def forked_grating(X, Y, center, angle, period, l, kind=''):
+def forked_grating(X, Y, center:tuple, angle:float, period:float, l:int, kind=''):
     """
     Defines a forked grating mask of variable size (in microns).
     
@@ -736,7 +891,32 @@ def forked_grating(X, Y, center, angle, period, l, kind=''):
 
 """ (5) Pre-built optical set-ups: """
 
-def building_block(input_light, alpha, phi, z, eta, theta):
+def bb_amplitude_and_phase_mod(input_light:object, alpha, phi, amp1, amp2, z:float, eta:float, theta:float) -> object:
+    """
+    Basic building block for general setup construction. 
+    Contains sSLM with Amplitude&Phase modulation. 
+    
+    Scheme:
+    Light in --> sSLM (alpha, phi, amp1, amp2) -- VRS(z) -- LCD (eta, theta) --> Light out
+    
+    Parameters:
+        input_light (VectorizedLight): Input light to the block (can be light source or light inside the system).
+        alpha, phi (jnp.array): sSLM phase masks.
+        amp1, amp2 (jnp.array): sSLM amplitude mod.
+        z (jnp.array): Distance to propagate between sSLM and LCD. 
+        eta, theta (jnp.array): Global retardance and tilt of LCD.
+    
+    Returns output light (VectorizedLight) from the block.
+    """
+    # Apply sSLM (alpha, amp1 - Ex-, phi, amp2 - Ey-)
+    l_modulated = sSLM_with_amplitude(input_light, alpha, phi, amp1, amp2)
+    # Propagate (z)
+    l_propagated, _ = l_modulated.VRS_propagation(z)
+    # Apply LCD
+    
+    return LCD(l_propagated, eta, theta)
+
+def building_block(input_light:object, alpha, phi, z:float, eta:float, theta:float) -> object:
     """
     Basic building block for general setup construction. 
     
@@ -781,11 +961,209 @@ def vectorized_fluorophores(i_ex, i_dep):
     vfluo = vmap(fluorescence, in_axes=(0, 0))
     return vfluo(i_ex, i_dep)
 
+def robust_discovery(ls1:object, ls2:object, ls3:object, ls4:object, ls5:object, ls6:object, parameters:list, fixed_params:list, noise_distances:list, noise_slms:list, noise_wps:list, noise_amps:list, distance_offset = 15):
+    """
+    ++++++++
+    Large-scale setup for hybrid (topology + optical settings) discovery with single wavelength. Measures longitudinal intensity across all detectors. 
+    Includes noise for robustness.
+    ++++++++
+    
+    Scheme:
+            ls1                       ls2                      ls3
+             |                         |                        |
+             |                         |                        |
+             v                         v                        v    
+    ls4 --> [BS] --> [BB 1] -- z1 --> [BS] --- z2_1 + z2_2 --> [BS] --- z3_1 + z3_2 ---> OL --> Detector 1
+             |                         |                        |
+             |                         z4                       z4             
+             |                         |                        |
+             v                         v                        v    
+    ls5 --> [BS] --> z1_1 + z1_2 ---> [BS] --> [BB 2]-- z2 --> [BS] --- z3_1 + z3_2 ---> OL --> Detector 2
+             |                         |                        |
+             |                         z5                       z5             
+             |                         |                        |
+             v                         v                        v      
+    ls6 --> [BS] --- z1_1 + z1_2 ---> [BS] --- z2_1 + z2_2 --> [BS] --> [BB 3] -- z3 --> OL --> Detector 3
+             |                         |                        |        
+             |                         |                        |
+             v                         v                        v    
+             OL                        OL                       OL
+             |                         |                        |
+             v                         v                        v    
+           Detector 4                Detector 5              Detector 6
+    
+    
+    Parameters: 
+        ls1, ls2, ..., ls6 (PolarizedLightSource)
+        parameters (jnp.array): parameters to pass to the optimizer
+            BB 1: [phase1_1, phase1_2, A1_1, A1_2, eta1, theta1, z1_1, z1_2]
+            BB 2: [phase2_1, phase2_2, A2_1, A2_2, eta2, theta2, z2_1, z2_2] 
+            BB 3: [phase3_1, phase3_2, A3_1, A3_2, eta3, theta3, z3_1, z3_2]
+            BS ratios: [bs1, bs2, bs3, bs4, bs5, bs6, bs7, bs8, bs9]
+            Extra distances: [z4, z5]
+        fixed_params (jnp.array): parameters to maintain fixed during optimization [r, f, xout and yout]; that is radius and focal length of the objective lens.
+        distance_offset (float): From get_VRS_minimum() estimate the 'offset'.
+    
+    Returns:
+        i1, i2, i3, i4, i5, i6 (jnp.array): Detected intensities
+    """
+    # Get fixed params:
+    r=fixed_params[0]
+    f=fixed_params[1]
+    xout=fixed_params[2]
+    yout=fixed_params[3]
+    
+    # Extract params:
+    # 1st bulding block:
+    phase1_1 = parameters[0]* 2*jnp.pi - jnp.pi + noise_slms[0]
+    phase1_2 = parameters[1]* 2*jnp.pi - jnp.pi + noise_slms[1]
+    A1_1 = parameters[2] + noise_amps[0]
+    A1_2 = parameters[3] + noise_amps[1]
+    eta1 = parameters[4]* 2*jnp.pi - jnp.pi + noise_wps[0]
+    theta1 = parameters[5]* 2*jnp.pi - jnp.pi + noise_wps[1]
+    z1_1 = (jnp.abs(parameters[6]) * 100 + distance_offset)*cm + noise_distances[0]
+    z1_2 = (jnp.abs(parameters[7]) * 100 + distance_offset)*cm + noise_distances[1]
+    
+    # 2nd building block:
+    phase2_1 = parameters[8]* 2*jnp.pi - jnp.pi + noise_slms[2]
+    phase2_2 = parameters[9]* 2*jnp.pi - jnp.pi + noise_slms[3]
+    A2_1 = parameters[10] + noise_amps[2]
+    A2_2 = parameters[11] + noise_amps[3]
+    eta2 = parameters[12]* 2*jnp.pi - jnp.pi + noise_wps[2]
+    theta2 = parameters[13]* 2*jnp.pi - jnp.pi + noise_wps[3]
+    z2_1 = (jnp.abs(parameters[14]) * 100 + distance_offset)*cm + noise_distances[2]
+    z2_2 = (jnp.abs(parameters[15]) * 100 + distance_offset)*cm + noise_distances[3]
+    
+    # 3rd building block:
+    phase3_1 = parameters[16]* 2*jnp.pi - jnp.pi + noise_slms[4]
+    phase3_2 = parameters[17]* 2*jnp.pi - jnp.pi + noise_slms[5]
+    A3_1 = parameters[18] + noise_amps[4]
+    A3_2 = parameters[19] + noise_amps[5]
+    eta3 = parameters[20]* 2*jnp.pi - jnp.pi + noise_wps[4]
+    theta3 = parameters[21]* 2*jnp.pi - jnp.pi + noise_wps[5]
+    z3_1 = (jnp.abs(parameters[22]) * 100 + distance_offset)*cm + noise_distances[4]
+    z3_2 = (jnp.abs(parameters[23]) * 100 + distance_offset)*cm + noise_distances[5]
+    
+    # Beam splitter ratios (theta: raw input from (0,1) to (-pi, pi)) 
+    bs1 = parameters[24]* 2*jnp.pi - jnp.pi
+    bs2 = parameters[25]* 2*jnp.pi - jnp.pi
+    bs3 = parameters[26]* 2*jnp.pi - jnp.pi
+    bs4 = parameters[27]* 2*jnp.pi - jnp.pi
+    bs5 = parameters[28]* 2*jnp.pi - jnp.pi
+    bs6 = parameters[29]* 2*jnp.pi - jnp.pi
+    bs7 = parameters[30]* 2*jnp.pi - jnp.pi
+    bs8 = parameters[31]* 2*jnp.pi - jnp.pi
+    bs9 = parameters[32]* 2*jnp.pi - jnp.pi
+    
+    # Extra distances:
+    z4 = (jnp.abs(parameters[33]) * 100 + distance_offset)*cm + noise_distances[6]
+    z5 = (jnp.abs(parameters[34]) * 100 + distance_offset)*cm + noise_distances[7]
+    
+    # 1st row bb_amplitude_and_phase_mod(input_light, alpha, phi, amp1, amp2, z, eta, theta)
+    c1, d1 = BS_symmetric(ls1, ls4, bs1)
+    b2, _ = (bb_amplitude_and_phase_mod(c1, phase1_1, phase1_2, A1_1, A1_2, z1_1, eta1, theta1)).VRS_propagation(z1_2)
+    c2, d2 = BS_symmetric(ls2, b2, bs2)
+    b3, _ = c2.VRS_propagation(z2_1+z2_2)
+    c3, d3 = BS_symmetric(ls3, b3, bs3)
+    b_det1, _ = c3.VRS_propagation(z3_1+z3_2)
+    det_1 = VCZT_objective_lens(b_det1, r, f, xout, yout)
+    
+    # Mid space:
+    a5, _ = d2.VRS_propagation(z4)
+    a6, _ = d3.VRS_propagation(z4)
+    
+    # 2nd row
+    c4, d4 = BS_symmetric(d1, ls5, bs4)
+    b5, _ = c4.VRS_propagation(z1_1 + z1_2)
+    c5, d5 = BS_symmetric(a5, b5, bs5)
+    b6, _ = (bb_amplitude_and_phase_mod(c5, phase2_1, phase2_2, A2_1, A2_2, z2_1, eta2, theta2)).VRS_propagation(z2_2)
+    c6, d6 = BS_symmetric(a6, b6, bs6)
+    b_det2, _ = c6.VRS_propagation(z3_1 + z3_2)
+    det_2 = VCZT_objective_lens(b_det2, r, f, xout, yout)
+    
+    # Mid space:
+    a8, _ = d5.VRS_propagation(z5)
+    a9, _ = d6.VRS_propagation(z5)
+    
+    # 3rd row
+    c7, d7 = BS_symmetric(d4, ls6, bs7)
+    b8, _ = c7.VRS_propagation(z1_1 + z1_2)
+    c8, d8 = BS_symmetric(a8, b8, bs8)
+    b9, _ = c8.VRS_propagation(z2_1 + z2_2)
+    c9, d9 = BS_symmetric(a9, b9, bs9)
+    b_det3, _ = (bb_amplitude_and_phase_mod(c9, phase3_1, phase3_2, A3_1, A3_2, z3_1, eta3, theta3)).VRS_propagation(z3_2)
+    det_3 = VCZT_objective_lens(b_det3, r, f, xout, yout)
+    
+    # Detector row:
+    det_4 = VCZT_objective_lens(d7, r, f, xout, yout)
+    
+    det_5 = VCZT_objective_lens(d8, r, f, xout, yout)
+    
+    det_6 = VCZT_objective_lens(d9, r, f, xout, yout)
+    
+    # Array of detector information
+    detector_array = [det_1, det_2, det_3, det_4, det_5, det_6]
+    
+    i1 = jnp.abs(det_1.Ez)**2
+    i2 = jnp.abs(det_2.Ez)**2
+    i3 = jnp.abs(det_3.Ez)**2
+    i4 = jnp.abs(det_4.Ez)**2
+    i5 = jnp.abs(det_5.Ez)**2
+    i6 = jnp.abs(det_6.Ez)**2
+    
+    # Array with specific z-intensities
+    intensities = jnp.stack([i1, i2, i3, i4, i5, i6])
+    
+    return intensities #, detector_array
 
-def hybrid_setup_fixed_slms_fluorophores(ls1, ls2, ls3, ls4, ls5, ls6, parameters, fixed_params, distance_offset = 8.9):
+def hybrid_setup_fixed_slms_fluorophores(ls1:object, ls2:object, ls3:object, ls4:object, ls5:object, ls6:object, parameters:list, fixed_params:list, distance_offset = 8.9):
     """
-    Hybrid steup with fixed phase masks for STED pure topology discovery: ls1 = red wavelength and ls2 = green wavelength
+    3x3 optical table with SLMs randomly positioned displaying fixed phase masks. 
+    To be used for pure topological discovery of STED microscopy (ls1 = red wavelength and ls2 = green wavelength). 
+    Contains the fluorescence model in all detectors.
+
+    Scheme:
+            ls1                       ls2                      ls1
+             |                         |                        |
+             |                         |                        |
+             v                         v                        v    
+    ls2 --> [BS] --> [PM #1] - z1 -> [BS] -------- z2 -------> [BS] ----> OL --> Detector 1
+             |                         |                        |
+             |                         |                     [PM #3]
+             |                         |                        |
+             z3                        z3                       z3
+             |                         |                        |
+             v                         v                        v    
+    ls1 --> [BS] -------- z1 -------> [BS] --> [PM #2] - z2 -> [BS] ----> OL --> Detector 2
+             |                         |                        |
+             |                         |                        |
+          [PM #4]                      |                        |
+             |                         |                        |
+             z4                        z4                       z4     
+             |                         |                        |
+             v                         v                        v      
+    ls2 --> [BS] -------- z1 -------> [BS] ------- z2 -------> [BS] ----> OL --> Detector 3
+             |                         |                        |        
+             |                         |                        |
+             v                         v                        v    
+             OL                        OL                       OL
+             |                         |                        |
+             v                         v                        v    
+           Detector 4                Detector 5              Detector 6
+    
+    Parameters: 
+        ls1, ls2, ..., ls6 (PolarizedLightSource)
+        parameters (jnp.array): parameters to pass to the optimizer
+            BS ratios: [bs1, bs2, bs3, bs4, bs5, bs6, bs7, bs8, bs9]
+            Distances: [z1, z2, z3, z4]
+        fixed_params (jnp.array): parameters to maintain fixed during optimization [r, f, xout, yout, PM1, PM2, PM3 and PM4]; 
+        that is radius and focal length of the objective lens, XY out and phase masks 1-4.
+        distance_offset (float): From get_VRS_minimum() estimate the 'offset'.
+    
+    Returns:
+        ieff [i1, i2, i3, i4, i5, i6] (jnp.array): Detected intensities
     """
+
     # Get fixed params:
     r=fixed_params[0]
     f=fixed_params[1]
@@ -966,10 +1344,10 @@ def hybrid_setup_fixed_slms_fluorophores(ls1, ls2, ls3, ls4, ls5, ls6, parameter
     
     return i_eff
 
-def hybrid_setup_fixed_slms(ls1, ls2, ls3, ls4, ls5, ls6, parameters, fixed_params, distance_offset = 8.9):
+def hybrid_setup_fixed_slms(ls1:object, ls2:object, ls3:object, ls4:object, ls5:object, ls6:object, parameters:list, fixed_params:list, distance_offset = 8.9):
     """
     ++++++++
-    Large-scale setup with fixed phase masks at random positions for pure tpology discovery. 
+    Large-scale setup with fixed phase masks at random positions. 
     
     
     For Dorn, Quabis, Leuchs: ls1, ls2, ls3, ls4, ls5, ls6 (650 nm)
@@ -1015,7 +1393,7 @@ def hybrid_setup_fixed_slms(ls1, ls2, ls3, ls4, ls5, ls6, parameters, fixed_para
         distance_offset (float): From get_VRS_minimum() estimate the 'offset'.
     
     Returns:
-        i1, i2, i3, i4, i5 (jnp.array): Detected intensities
+        i1, i2, i3, i4, i5, i6 (jnp.array): Detected intensities
     """
     # Get fixed params:
     r=fixed_params[0]
@@ -1122,10 +1500,10 @@ def hybrid_setup_fixed_slms(ls1, ls2, ls3, ls4, ls5, ls6, parameters, fixed_para
     
     return intensities, detector_array
 
-def hybrid_setup_sharp_focus(ls1, ls2, ls3, ls4, ls5, ls6, parameters, fixed_params, distance_offset = 8.9):
+def hybrid_setup_sharp_focus(ls1:object, ls2:object, ls3:object, ls4:object, ls5:object, ls6:object, parameters:list, fixed_params:list, distance_offset = 8.9) -> tuple:
     """
     ++++++++
-    For Dorn, Quabis, Leuchs benchmark: ls1, ls2, ls3, ls4, ls5, ls6 (650 nm)
+    For Dorn, Quabis, Leuchs: ls1, ls2, ls3, ls4, ls5, ls6 (650 nm)
     ++++++++
     
     Scheme:
@@ -1165,7 +1543,7 @@ def hybrid_setup_sharp_focus(ls1, ls2, ls3, ls4, ls5, ls6, parameters, fixed_par
         distance_offset (float): From get_VRS_minimum() estimate the 'offset'.
     
     Returns:
-        i1, i2, i3, i4, i5 (jnp.array): Detected intensities
+        i1, i2, i3, i4, i5, i6 (jnp.array): Detected intensities
     """
     # Get fixed params:
     r=fixed_params[0]
@@ -1270,9 +1648,9 @@ def hybrid_setup_sharp_focus(ls1, ls2, ls3, ls4, ls5, ls6, parameters, fixed_par
     
     return intensities, detector_array
 
-def hybrid_setup_fluorophores(ls1, ls2, ls3, ls4, ls5, ls6, parameters, fixed_params, distance_offset = 8.9):
+def hybrid_setup_fluorophores(ls1:object, ls2:object, ls3:object, ls4:object, ls5:object, ls6:object, parameters:list, fixed_params:list, distance_offset = 8.9):
     """
-    [hybrid_setup with fluorophores] - STED-like
+    [hybrid_setup with fluorophores] - STEDlike
     
     Scheme:
             ls1                       ls2                      ls3
@@ -1465,16 +1843,16 @@ def hybrid_setup_fluorophores(ls1, ls2, ls3, ls4, ls5, ls6, parameters, fixed_pa
     i5_dep = jnp.abs(det_5_r.Ex)**2 + jnp.abs(det_5_r.Ey)**2# + jnp.abs(det_5_r.Ez)**2
     i6_dep = jnp.abs(det_6_r.Ex)**2 + jnp.abs(det_6_r.Ey)**2# + jnp.abs(det_6_r.Ez)**2
     
-    # Array with intensities
+    # Array with specific z-intensities
     iex = jnp.stack([i1_ex/jnp.sum(i1_ex), i2_ex/jnp.sum(i2_ex), i3_ex/jnp.sum(i3_ex), i4_ex/jnp.sum(i4_ex), i5_ex/jnp.sum(i5_ex), i6_ex/jnp.sum(i6_ex)])
     idep = jnp.stack([i1_dep/jnp.sum(i1_dep), i2_dep/jnp.sum(i2_dep), i3_dep/jnp.sum(i3_dep), i4_dep/jnp.sum(i4_dep), i5_dep/jnp.sum(i5_dep), i6_dep/jnp.sum(i6_dep)])                       
+    
     # Resulting STED-like beam
     i_eff = vectorized_fluorophores(iex, idep)
     
     return i_eff
 
-
-def six_times_six_ansatz(ls1, ls2, ls3, ls4, ls5, ls6, ls7, ls8, ls9, ls10, ls11, ls12, parameters, fixed_params, distance_offset = 7.6):
+def six_times_six_ansatz(ls1:object, ls2:object, ls3:object, ls4:object, ls5:object, ls6:object, ls7:object, ls8:object, ls9:object, ls10:object, ls11:object, ls12:object, parameters:list, fixed_params:list, distance_offset = 7.6):
     """
     ++++++++
     6x6 grid:
@@ -1483,7 +1861,7 @@ def six_times_six_ansatz(ls1, ls2, ls3, ls4, ls5, ls6, ls7, ls8, ls9, ls10, ls11
         2 super slms (i.e., 4 slms with fixed PM),
         2 waveplates
         
-    Look for Dorn, Quabis, Leuchs benchmark: ls1-ls12 (635 nm)
+    Look for Dorn, Quabis, Leuchs: ls1-ls12 (635 nm)
     ++++++++
    
     Parameters: 
@@ -1742,318 +2120,182 @@ def six_times_six_ansatz(ls1, ls2, ls3, ls4, ls5, ls6, ls7, ls8, ls9, ls10, ls11
     return intensities #, detector_array
 
 
+# ------------------------------------------------------------------------------------------------
 
+""" (6) Add noise to optical elements: """
 
-
-def xl_setup(ls1, ls2, parameters, fixed_params):
+def shake_setup(key, resolution:int, NS:dict):
     """
-    Optical table with a more general set-up. Building blocks are [ls, sSLM, LCD], joint by BS. 
+    [THIS FUNCTION IS INTENDED TO BE USED WITHOUT @jit COMPILATION FOR `batch_shake_setup` as it accepts NS:dict as argument]
+
+    Creates noise for all the different optical elements on an optical table.
     
-    Scheme:
-    [See Fig. 7a in our paper: https://doi.org/10.48550/arXiv.2310.08408].
+    if distance, slm phase, slm amplitude and waveplate -- num_physical_variables is 4. 
     
     Parameters:
-        ls1, ls2, (VectorizedLight): Light sources of the same type (need for interference).
-        parameters (list): Parameters to pass to the optimizer for sSLM, LCD and VRS.
-        parameters[0 -> 4] = alpha, phi, z, eta, theta, for 1st block.
-        parameters[5 -> 9] = alpha, phi, z, eta, theta, for 2nd block.
-        parameters[10 -> 14] = alpha, phi, z, eta, theta, for 3rd block.
-        parameters[15 -> 19] = alpha, phi, z, eta, theta, for 4th block.
-        parameters[20 -> 22] = Distance to beam splitters.
-        fixed_params (jnp.array): Parameters to maintain fixed during optimization [r, f]; that is radius and focal of the objective lens.
-  
-    Parameters in the optimizer are from (0,1). Conversion factor here are:
-    
-        1. Convert (0,1) to distance in cm -> Conversion factor for (offset, 100)*cm = (offset/100, 1).
-        2. Convert (0,1) to phase (in radians) -> Conversion factor (-pi, pi) + pi = (0, 2pi) = (0, 1). 
-    
-    + From get_VRS_minimum_z(), estimate the 'offset'. 
-  
-    Returns intensity (jnp.array) in the focal plane and fields at stop ends.
-    """
-    offset = 8.9 
-    
-    # Apply building blocks:
-    
-    # Wavelength 1:
-    light_path_a, _ = (building_block(ls1, parameters[0]* 2*jnp.pi - jnp.pi, parameters[1]* 2*jnp.pi - jnp.pi, (jnp.abs(parameters[2]) * 100 + offset)*cm, parameters[3]* 2*jnp.pi - jnp.pi, parameters[4]* 2*jnp.pi - jnp.pi)).VRS_propagation((jnp.abs(parameters[20]) * 100 + offset)*cm)
-    light_path_b, _ = (building_block(ls1, parameters[5]* 2*jnp.pi - jnp.pi, parameters[6]* 2*jnp.pi - jnp.pi, (jnp.abs(parameters[7]) * 100 + offset)*cm, parameters[8]* 2*jnp.pi - jnp.pi, parameters[9]* 2*jnp.pi - jnp.pi)).VRS_propagation((jnp.abs(parameters[21]) * 100 + offset)*cm)
-        # Join the building blocks of equal wavelength with BS: 
-    ab_reflected, ab_transmitted = BS(light_path_b, light_path_a, 0.5, 0.5, jnp.pi)
-    
-    # Wavelength 2
-    light_path_c, _ = (building_block(ls2, parameters[10]* 2*jnp.pi - jnp.pi, parameters[11]* 2*jnp.pi - jnp.pi, (jnp.abs(parameters[12]) * 100 + offset)*cm, parameters[13]* 2*jnp.pi - jnp.pi, parameters[14]* 2*jnp.pi - jnp.pi)).VRS_propagation((jnp.abs(parameters[22]) * 100 + offset)*cm)
-    light_path_d, _ = (building_block(ls2, parameters[15]* 2*jnp.pi - jnp.pi, parameters[16]* 2*jnp.pi - jnp.pi, (jnp.abs(parameters[17]) * 100 + offset)*cm, parameters[18]* 2*jnp.pi - jnp.pi, parameters[19]* 2*jnp.pi - jnp.pi)).VRS_propagation((jnp.abs(parameters[23]) * 100 + offset)*cm)
-        # Join the building blocks of equal wavelength with BS: 
-    cd_reflected, cd_transmitted = BS(light_path_d, light_path_c, 0.5, 0.5, jnp.pi)
-    
-    # Propagate to focal plane and extract the intensity
-    ls1_f = VCZT_objective_lens(ab_reflected, r=fixed_params[0], f=fixed_params[1], xout=fixed_params[2], yout=fixed_params[3])
-    ls2_f = VCZT_objective_lens(cd_transmitted, r=fixed_params[0], f=fixed_params[1], xout=fixed_params[2], yout=fixed_params[3])
-    
-    # TOTAL (3D) intensity
-    i_ls1 = jnp.abs(ls1_f.Ex)**2 + jnp.abs(ls1_f.Ey)**2 + jnp.abs(ls1_f.Ez)**2
-    i_ls2 = jnp.abs(ls2_f.Ex)**2 + jnp.abs(ls2_f.Ey)**2 + jnp.abs(ls2_f.Ez)**2
-    
-    # Resulting STED function computed for 3D:
-    beta = 1 # Efficiency in the depletion
-    
-    i_eff = i_ls2 * (1 - beta * (1- jnp.exp(-(i_ls1/i_ls2))))
+        key (PRNGKey): JAX random key 
+        resolution (int): number of pixels for space
+        NS (dict):  dictionary containing noise settings as:
+            NS = {'n_tables': __, 'number of distances': __,
+                    'number of sSLM': __, 'number of wps': __,
+                    'noise_level': __, 
+                    'misalignment': (minval, maxval), 
+                    'phase_noise': (minval, maxval),
+                    'discretize': __}
+        with:
+            level (str): different level noise ('low', 'mild', 'high', 'all' and 'tunable'):
+        
+                low: noise in SLMs and WPs $\pm$(0.01 to 0.05) rads and misalignment of $\pm$(0.01 to 0.05) mm 
+                mild: noise in SLMs and WPs $\pm$(0.05 to 0.5) rads and misalignment of $\pm$(0.05 to 0.5) mm 
+                high: noise in SLMs and WPs $\pm$(0.5 to 1) rads and misalignment of $\pm$(0.5 to 1) mm 
+                all: noise in SLMs and WPs $\pm$(0.01 to 1) rads and misalignment of $\pm$(0.01 to 1) mm 
+                tunable: tunable noise via NS dictionary
 
-    return i_eff, ls1_f, ls2_f
+            discretize (bool): if true, discretize SLM noise to 8-bit.
     
-def vSTED(excitation_beam, depletion_beam, parameters, fixed_params):
-    """
-    Vectorial-based STED. 
-    [Ref] D. Wildanger, E. Rittweger, L. Kastrup, and S. W. Hell, Opt. Express 16, 9614-9621 (2008).
-    
-    Scheme: 
-    STED beam ---> Modulate: sSLM (phase mask) --> VRS(z) --> High NA lens 
-    Excitation beam ----------------------------------------> High NA lens 
-              
-    Parameters:
-        excitation_beam (object): input field for the excitation.
-        depletion_beam (object): input field for the depletion.
-        parameters (jnp.array): parameters to pass to the optimizer [phase 1] for sSLM.
-        fixed_params (jnp.array): parameters to maintain fixed during optimization [r, f, xout and yout]; that is radius and focal length of the objective lens.
-           
     Returns:
-        i_eff (jnp.array) effective PSF of the system, 
-        i_ex (jnp.array) excitation intensity in the focal plane,
-        i_dep (jnp.array) depletion intensity in the focal plane,
-        ex_f (object) excitation beam in the focal plane,
-        dep_f (object) depletion beam in the focal plane.
-        
-    Parameters in the optimizer are from (0,1). Conversion factor here are: 
-        
-        Convert (0,1) to phase (in radians) -> Conversion factor (-pi, pi) + pi = (0, 2pi) = (0, 1). 
+        random_noise_distances, random_noise_slms, random_noise_wps, random_noise_amps, key0 (new key to split in the next iteration), key (old key)
     """
-    # Estimate the offset via get_VRS_minimum().
-    offset = 24000 #microns
-    
-    # Apply phase mask to depletion beam. We use only the SLM in sSLM corresponding to the input polarization state. The other is set to zero.
-    dep_modulated = sSLM(depletion_beam, parameters[0]* 2 * jnp.pi - jnp.pi, jnp.zeros((2048, 2048)))
-    
-    # Propagate:
-    dep_propagated, _ = dep_modulated.VRS_propagation(z=offset)
-    
-    # Propagate to focal plane and extract the intensity
-    ex_f = VCZT_objective_lens(excitation_beam, r=fixed_params[0], f=fixed_params[1], xout=fixed_params[2], yout=fixed_params[3])
-    dep_f = VCZT_objective_lens(dep_propagated, r=fixed_params[0], f=fixed_params[1], xout=fixed_params[2], yout=fixed_params[3])
-    
-    # Ir intensity
-    i_ex = jnp.abs(ex_f.Ex)**2 + jnp.abs(ex_f.Ey)**2
-    i_dep = jnp.abs(dep_f.Ex)**2 + jnp.abs(dep_f.Ey)**2
-    
-    # Resulting STED-like beam
-    beta = 1 # Efficiency in the depletion
-    
-    i_eff = i_ex * (1 - beta * (1- jnp.exp(-(i_dep/i_ex)))) 
+    num_physical_variables = 4 # of physical variables (e.g., distance, slm phase, ,...) to optimize.
+    # split as many times as variables + 1 to renew the key0 each step
+    key0, key1, key2, key3, key4 = random.split(key, num_physical_variables+1)
+    d_type = 'int8'
 
-    return i_eff, i_ex, i_dep, ex_f, dep_f
+    # NS is not an input to ensure vmap during optimization.
+    level = NS['noise_level']
+    discretize = NS['discretize']
+    
+    if level == 'low':
+        # Misalignment (um)
+        minval_d = 10*um  # 0.01 mm
+        maxval_d = 50*um # 0.05 mm
+        # SLM / WP phase and amplitude (rads and AU, respectively)
+        minval_phase = 0.01 
+        maxval_phase = 0.05
 
+    if level == 'mild':
+        # Misalignment (um)
+        minval_d = 50*um  # 0.05 mm
+        maxval_d = 500*um # 0.5 mm
+        # SLM / WP phase and amplitude (rads and AU, respectively)
+        minval_phase = 0.05 
+        maxval_phase = 0.5
 
-def sharp_focus(input_field, parameters, fixed_params):
+    if level == 'high':
+        # Misalignment (um)
+        minval_d = 500*um # 0.5 mm
+        maxval_d = 1000*um # 1 mm
+        # SLM / WP phase and amplitude (rads and AU, respectively)
+        minval_phase = 0.5
+        maxval_phase = 1
+
+    if level == 'all':
+        # Misalignment (um)
+        minval_d = 10*um  # 0.01 mm
+        maxval_d = 1000*um # 0.15 mm
+        # SLM / WP phase and amplitude (rads and AU, respectively)
+        minval_phase = 0.01 
+        maxval_phase = 1
+
+    if level == 'tunable':
+        # Misalignment (um)
+        minval_d, maxval_d  = NS['misalignment']  # in um
+        # SLM / WP phase and amplitude (rads and AU, respectively)
+        minval_phase, maxval_phase = NS['phase_noise']
+
+    if discretize: 
+        d_type = 'uint8'
+
+    # noise for distances (d1 and d2): shape = (1, NS['number of distances'])
+    random_noise_distances = jnp.squeeze(random.uniform(key1, shape=(1, NS['number of distances']), minval=minval_d, maxval=maxval_d), axis=0) 
+    # noise for SLMs phases and amplitude (slm1 and slm2): shape = (2, (resolution, resolution))
+    random_noise_amps = random.choice(key4, jnp.array([-1,1]), shape=(2*NS['number of sSLM'], resolution, resolution)).astype(d_type) * random.uniform(key2, shape=(2*NS['number of sSLM'], resolution, resolution), minval=minval_phase, maxval=maxval_phase) 
+    random_noise_slms = random.choice(key2, jnp.array([-1,1]), shape=(2*NS['number of sSLM'], resolution, resolution)).astype(d_type) * random.uniform(key2, shape=(2*NS['number of sSLM'], resolution, resolution), minval=minval_phase, maxval=maxval_phase) 
+    # noise for WP angles (eta and theta): shape = (1, 2)
+    random_noise_wps = jnp.squeeze(random.choice(key3, jnp.array([-1,1]), shape=(1, 2*NS['number of wps'])).astype('int8'), axis=0) * jnp.squeeze(random.uniform(key3, shape=(1, 2*NS['number of wps']), minval=minval_phase, maxval=maxval_phase), axis=0) 
+    
+    return random_noise_distances, random_noise_slms, random_noise_wps, random_noise_amps, key0, key
+
+def shake_setup_jit(key, resolution):
     """
-    Define an optical table for sharp focus. 
+    [THIS FUNCTION IS INTENDED TO BE PASTED IN THE OPTIMIZER FILE TO ENABLE @jit COMPILATION FOR `batch_shake_setup`]
     
-    Illustrative scheme:
-
-    (Ex, Ey) --> PBS --> Ex --> Modulate: SLM(alpha) --> Ex' --> PBS --> (Ex', Ey') --> Modulate: LCD(eta, theta) 
-                  |                                               |                               |
-                  Ey ---------> Modulate: SLM(phi) ----> Ey' -----/                          (Ex'', Ey'') --> Propagate: VRS(z) --> objective_lens(r,f)
-
-    Parameters:
-        input_field (VectorizedLight): Light to be modulated.
-        parameters (list): Parameters to pass to the optimizer [alpha, phi, eta, theta, z1 and z2] for sSLM, LCD and VRS.
-        fixed_params (jnp.array): Parameters to maintain fixed during optimization [r, f] that is radius and focal of the high NA objective lens.
-        
-    Returns VectorizedLight in the focal plane.
-    
-    Parameters in the optimizer are from (0,1). Conversion factor here are:
-    
-        1. Convert (0,1) to distance in cm -> Conversion factor for (offset, 100)*cm = (offset/100, 1).
-        2. Convert (0,1) to phase (in radians) -> Conversion factor (-pi, pi) + pi = (0, 2pi) = (0, 1). 
-    """
-    offset = 3.8 # cm 
-
-    # 1. Apply super-SLM:
-    modulated_light = sSLM(input_field, parameters[0]* 2 * jnp.pi - jnp.pi, parameters[1]* 2 * jnp.pi - jnp.pi)
-    
-    # 2. Propagate:
-    propagated_1, _ = modulated_light.VRS_propagation(z=(jnp.abs(parameters[4])*100+offset)*cm)
-    
-    # 3. Apply LCD: 
-    modulated_light_2 = LCD(propagated_1, parameters[2]* 2 * jnp.pi - jnp.pi, parameters[3]* 2 * jnp.pi - jnp.pi)
-    
-    # 4. Propagate:
-    propagated_2, _ = modulated_light_2.VRS_propagation(z=(jnp.abs(parameters[5])*100+offset)*cm)
-    
-    # 5. Strong focus using high NA objective:
-    focused_light = VCZT_objective_lens(propagated_2, r=fixed_params[0], f=fixed_params[1], xout=fixed_params[2], yout=fixed_params[3])
-    
-    return focused_light
-
-def XL_Setup(ls1, ls2, ls3, z, phase, angle, r, f, xout, yout):
-    """
-    Optical table with the general set-up in Fig. 6a (https://arxiv.org/abs/2310.08408#):  
-    Building blocks consist of [sSLM -- z --> LCD], joint by z and beam splitters (BS). 
+    Creates noise for all the different optical variables on an optical table.
     
     Parameters:
-    ls1, ls2, ls3 (VectorizedLight objects): Light sources.
-    z (float): Distance to propagate.
-    phase (jnp.array): Array with phase masks for sSLM.
-    angle (float): Angle for LCDs.
-    r (float): Radius of the objective lens.
-    f (float): Focal length of the objective lens.
-    xout, yout (jnp.arrays): Size of the detection window. 
-    
-    Returns VectorizedLight objects at 6 detectors. 
-    
-    -------------------------------------------------------------------
-    
-    * Scheme of the setup (distance z, phase masks, angles, and objective lens specs are common - this setup is for testing, not optimizing):
-    
+        key (PRNGKey): JAX random key
+        resolution (int): number of pixels for space
+        
+        global variable NS (dict): noise settings as
 
-                             ls1                     ls2                     ls3
-                              |                       |                       |
-                            [BB 2]                  [BB 4]                 [BB 6]
-                              |                       |                       |
-                              z                       z                       z             
-                              |                       |                       |
-                              v                       v                       v    
-    ls1 --> [BB 1] -- z --> [BS] --> [BB 7] -- z --> [BS] --> [BB 8] -- z -> [BS] --> OL --> Detector
-                              |                       |                       |
-                              z                       z                       z             
-                              |                       |                       |
-                              v                       v                       v    
-                           [BB 13]                 [BB 15]                 [BB 17]
-                              |                       |                       |
-                              z                       z                       z             
-                              |                       |                       |
-                              v                       v                       v    
-    ls2 --> [BB 3] -- z --> [BS] --> [BB 9] -- z --> [BS] --> [BB 10] - z -> [BS] --> OL --> Detector
-                              |                       |                       |
-                              z                       z                       z             
-                              |                       |                       |
-                              v                       v                       v    
-                           [BB 14]                 [BB 16]                 [BB 18]
-                              |                       |                       |
-                              z                       z                       z             
-                              |                       |                       |
-                              v                       v                       v  
-    ls3 --> [BB 5] -- z --> [BS] --> [BB 11] -- z -> [BS] -> [BB 12] -- z -> [BS] --> OL --> Detector
-                              |                       |                       |
-                              z                       z                       z             
-                              |                       |                       |
-                              v                       v                       v    
-                              OL                      OL                      OL
-                              |                       |                       |
-                              v                       v                       v    
-                           Detector                Detector                Detector
+            NS = {'n_tables': __, 'number of distances': __,
+                  'number of sSLM': __, 'number of wps': __,
+                  'noise_level': __, 
+                  'misalignment': (minval, maxval), 
+                  'phase_noise': (minval, maxval),
+                  'discretize': __}
+    
+    Returns:
+        random_noise_distances, random_noise_slms, random_noise_wps, random_noise_amps, key0 (new key to split in the next iteration), key (old key)
     """
-    tic = time.perf_counter()
-    # Define empty object for single-input BS.
-    empty = VectorizedLight(ls1.x, ls1.y, ls1.wavelength)
+    num_physical_variables = 4 # of physical variables (e.g., distance, slm phase, ,...) to optimize.
+    # split as many times as variables + 1 to renew the key0 each step
+    key0, key1, key2, key3, key4 = random.split(key, num_physical_variables+1)
+    d_type = 'int8'
+
+    # NS is not an input to ensure vmap during optimization.
+    level = NS['noise_level']
+    discretize = NS['discretize']
     
-    # Apply initial building blocks:
-    path_ls1_1, _ = (building_block(ls1, phase, phase, z, angle, angle)).VRS_propagation(z)
-    path_ls1_2, _ = (building_block(ls1, phase, phase, z, angle, angle)).VRS_propagation(z)
+    # level can be: 'low' == 0, 'mild' == 1, 'high' == 2, 'all' == 3 and 'tunable' == 4
 
-    path_ls2_1, _ = (building_block(ls2, phase, phase, z, angle, angle)).VRS_propagation(z)
-    path_ls2_2, _ = (building_block(ls2, phase, phase, z, angle, angle)).VRS_propagation(z)
+    if level == 'low':
+        # Misalignment (um)
+        minval_d = 10*um  # 0.01 mm
+        maxval_d = 50*um # 0.05 mm
+        # SLM / WP phase and amplitude (rads and AU, respectively)
+        minval_phase = 0.01 
+        maxval_phase = 0.05
 
-    path_ls3_1, _ = (building_block(ls3, phase, phase, z, angle, angle)).VRS_propagation(z)
-    path_ls3_2, _ = (building_block(ls3, phase, phase, z, angle, angle)).VRS_propagation(z)
+    if level == 'mild':
+        # Misalignment (um)
+        minval_d = 50*um  # 0.05 mm
+        maxval_d = 500*um # 0.5 mm
+        # SLM / WP phase and amplitude (rads and AU, respectively)
+        minval_phase = 0.05 
+        maxval_phase = 0.5
 
-    # Compute the first row
-    ls1_ref, ls1_tra = BS(path_ls1_2, path_ls1_1, 0.5, 0.5, jnp.pi)
-    path_ls1_3, _ = (building_block(ls1_tra, phase, phase, z, angle, angle)).VRS_propagation(z)
-    path_ls1_3_ref, path_ls1_3_tra = BS(empty, path_ls1_3, 0.5,0.5, jnp.pi)
-    path_ls1_4, _ = (building_block(path_ls1_3_tra, phase, phase, z, angle, angle)).VRS_propagation(z)
-    path_ls1_4_ref, path_ls1_4_tra = BS(empty, path_ls1_4, 0.5,0.5, jnp.pi)                 
-    ls1_f1 = VCZT_objective_lens(path_ls1_4_tra, r=r, f=f, xout=xout, yout=yout)
+    if level == 'high':
+        # Misalignment (um)
+        minval_d = 500*um # 0.5 mm
+        maxval_d = 1000*um # 1 mm
+        # SLM / WP phase and amplitude (rads and AU, respectively)
+        minval_phase = 0.5
+        maxval_phase = 1
 
-    path_ls2_2_ref, path_ls2_2_tra = BS(path_ls2_2, empty, 0.5, 0.5, jnp.pi)                 
-    path_ls2_3, _ = (building_block(path_ls2_2_ref, phase, phase, z, angle, angle)).VRS_propagation(z)
-    path_ls2_3_ref, path_ls2_3_tra = BS(empty, path_ls2_3, 0.5,0.5, jnp.pi)
-    ls2_f1 = VCZT_objective_lens(path_ls2_3_tra, r=r, f=f, xout=xout, yout=yout)  
+    if level == 'all':
+        # Misalignment (um)
+        minval_d = 10*um  # 0.01 mm
+        maxval_d = 1000*um # 0.15 mm
+        # SLM / WP phase and amplitude (rads and AU, respectively)
+        minval_phase = 0.01 
+        maxval_phase = 1
 
-    path_ls3_2_ref, path_ls3_2_tra = BS(path_ls3_2, empty, 0.5, 0.5, jnp.pi)                     
-    ls3_f1 = VCZT_objective_lens(path_ls3_2_ref, r=r, f=f, xout=xout, yout=yout)  
+    if level == 'tunable':
+        # Misalignment (um)
+        minval_d, maxval_d  = NS['misalignment']  # in um
+        # SLM / WP phase and amplitude (rads and AU, respectively)
+        minval_phase, maxval_phase = NS['phase_noise']
 
-    # Compute 2nd row
-    path_ls1_5, _ = (building_block(ls1_ref, phase, phase, z, angle, angle)).VRS_propagation(z)
-    path_ls1_6, _ = (building_block(path_ls1_3_ref, phase, phase, z, angle, angle)).VRS_propagation(z)
-    path_ls1_7, _ = (building_block(path_ls1_4_ref, phase, phase, z, angle, angle)).VRS_propagation(z)
+    if discretize: 
+        d_type = 'uint8'
 
-    path_ls2_4, _ = (building_block(path_ls2_2_tra, phase, phase, z, angle, angle)).VRS_propagation(z)
-    path_ls2_5, _ = (building_block(path_ls2_3_ref, phase, phase, z, angle, angle)).VRS_propagation(z)  
-    path_ls3_3, _ = (building_block(path_ls3_2_tra, phase, phase, z, angle, angle)).VRS_propagation(z)   
-
-    # Compute 3rd row
-    path_ls1_3_ref, path_ls1_3_tra = BS(path_ls1_3, empty, 0.5,0.5, jnp.pi)
-    path_ls1_8, _ = (building_block(path_ls1_3_ref, phase, phase, z, angle, angle)).VRS_propagation(z)
-    path_ls1_8_ref, path_ls1_8_tra = BS(path_ls1_6, path_ls1_8, 0.5,0.5, jnp.pi)
-    path_ls1_9, _ = (building_block(path_ls1_8_tra, phase, phase, z, angle, angle)).VRS_propagation(z)
-    path_ls1_9_ref, path_ls1_9_tra = BS(path_ls1_7, path_ls1_9, 0.5,0.5, jnp.pi)                 
-    ls1_f2 = VCZT_objective_lens(path_ls1_9_tra, r=r, f=f, xout=xout, yout=yout)  
-
-    path_ls2_1_ref, path_ls2_1_tra = BS(path_ls2_1, empty, 0.5,0.5, jnp.pi)
-    path_ls2_6, _ = (building_block(path_ls2_1_tra, phase, phase, z, angle, angle)).VRS_propagation(z)
-    path_ls2_6_ref, path_ls2_6_tra = BS(path_ls2_4, path_ls2_6, 0.5,0.5, jnp.pi)
-    path_ls2_7, _ = (building_block(path_ls2_6_tra, phase, phase, z, angle, angle)).VRS_propagation(z)
-    path_ls2_7_ref, path_ls2_7_tra = BS(path_ls2_5, path_ls2_7,0.5,0.5, jnp.pi)
-    ls2_f2 = VCZT_objective_lens(path_ls2_7_tra, r=r, f=f, xout=xout, yout=yout)  
-
-    path_ls3_3_ref, path_ls3_3_tra = BS(path_ls3_2_tra, empty, 0.5,0.5, jnp.pi)                 
-    ls3_f2 = VCZT_objective_lens(path_ls3_3_ref, r=r, f=f, xout=xout, yout=yout)  
-
-    # Compute 4th row
-    path_ls1_10, _ = (building_block(path_ls1_3_tra, phase, phase, z, angle, angle)).VRS_propagation(z)
-    path_ls2_8, _ = (building_block(path_ls2_1_ref, phase, phase, z, angle, angle)).VRS_propagation(z)
-
-    path_ls1_11, _ = (building_block(path_ls1_8_ref, phase, phase, z, angle, angle)).VRS_propagation(z)
-    path_ls2_9, _ = (building_block(path_ls2_6_ref, phase, phase, z, angle, angle)).VRS_propagation(z)
-
-    path_ls1_12, _ = (building_block(path_ls1_9_ref, phase, phase, z, angle, angle)).VRS_propagation(z)      
-    path_ls2_10, _ = (building_block(path_ls2_7_ref, phase, phase, z, angle, angle)).VRS_propagation(z)  
-    path_ls3_4, _ = (building_block(path_ls3_3_tra, phase, phase, z, angle, angle)).VRS_propagation(z)   
-
-    # Compute 5th row       
-    path_ls1_10_ref, path_ls1_10_tra = BS(path_ls1_10, empty, 0.5,0.5, jnp.pi)  
-    path_ls1_13, _ = (building_block(path_ls1_10_ref, phase, phase, z, angle, angle)).VRS_propagation(z)
-    path_ls1_13_ref, path_ls1_13_tra = BS(path_ls1_11, path_ls1_13,0.5,0.5, jnp.pi)                 
-    path_ls1_14, _ = (building_block(path_ls1_13_tra, phase, phase, z, angle, angle)).VRS_propagation(z)
-    path_ls1_14_ref, path_ls1_14_tra = BS(path_ls1_12, path_ls1_14,0.5,0.5, jnp.pi)                    
-    ls1_f3 = VCZT_objective_lens(path_ls1_14_tra, r=r, f=f, xout=xout, yout=yout)  
-
-    path_ls2_8_ref, path_ls2_8_tra = BS(path_ls2_8, empty, 0.5,0.5, jnp.pi)  
-    path_ls2_11, _ = (building_block(path_ls2_8_ref, phase, phase, z, angle, angle)).VRS_propagation(z)
-    path_ls2_11_ref, path_ls2_11_tra = BS(path_ls2_9, path_ls2_11,0.5,0.5, jnp.pi)                  
-    path_ls2_12, _ = (building_block(path_ls2_11_tra, phase, phase, z, angle, angle)).VRS_propagation(z)
-    path_ls2_12_ref, path_ls2_12_tra = BS(path_ls2_10, path_ls2_12,0.5,0.5, jnp.pi)     
-    ls2_f3 = VCZT_objective_lens(path_ls2_12_tra, r=r, f=f, xout=xout, yout=yout)  
-
-    path_ls3_1_ref, path_ls3_1_tra = BS(empty, path_ls3_1, 0.5,0.5, jnp.pi)  
-    path_ls3_5, _ = (building_block(path_ls3_1_tra, phase, phase, z, angle, angle)).VRS_propagation(z)
-    path_ls3_5_ref, path_ls3_5_tra = BS(empty, path_ls3_5, 0.5,0.5, jnp.pi)                  
-    path_ls3_6, _ = (building_block(path_ls3_5_tra, phase, phase, z, angle, angle)).VRS_propagation(z)
-    path_ls3_6_ref, path_ls3_6_tra = BS(path_ls3_4, path_ls3_6,0.5,0.5, jnp.pi)  
-    ls3_f3 = VCZT_objective_lens(path_ls3_6_tra, r=r, f=f, xout=xout, yout=yout)              
-
-    # Compute 6th row
-    ls1_f4 = VCZT_objective_lens(path_ls1_10_tra, r=r, f=f, xout=xout, yout=yout)  
-    ls2_f4 = VCZT_objective_lens(path_ls2_8_tra, r=r, f=f, xout=xout, yout=yout)  
-    ls3_f4 = VCZT_objective_lens(path_ls3_1_ref, r=r, f=f, xout=xout, yout=yout)
+    # noise for distances (d1 and d2): shape = (1, NS['number of distances'])
+    random_noise_distances = jnp.squeeze(random.uniform(key1, shape=(1, NS['number of distances']), minval=minval_d, maxval=maxval_d), axis=0) 
+    # noise for SLMs phases and amplitude (slm1 and slm2): shape = (2, (resolution, resolution))
+    random_noise_amps = random.choice(key4, jnp.array([-1,1]), shape=(2*NS['number of sSLM'], resolution, resolution)).astype(d_type) * random.uniform(key2, shape=(2*NS['number of sSLM'], resolution, resolution), minval=minval_phase, maxval=maxval_phase) 
+    random_noise_slms = random.choice(key2, jnp.array([-1,1]), shape=(2*NS['number of sSLM'], resolution, resolution)).astype(d_type) * random.uniform(key2, shape=(2*NS['number of sSLM'], resolution, resolution), minval=minval_phase, maxval=maxval_phase) 
+    # noise for WP angles (eta and theta): shape = (1, 2)
+    random_noise_wps = jnp.squeeze(random.choice(key3, jnp.array([-1,1]), shape=(1, 2*NS['number of wps'])).astype('int8'), axis=0) * jnp.squeeze(random.uniform(key3, shape=(1, 2*NS['number of wps']), minval=minval_phase, maxval=maxval_phase), axis=0) 
     
-    ls1_f5 = VCZT_objective_lens(path_ls1_13_ref, r=r, f=f, xout=xout, yout=yout)  
-    ls2_f5 = VCZT_objective_lens(path_ls2_11_ref, r=r, f=f, xout=xout, yout=yout)  
-    ls3_f5 = VCZT_objective_lens(path_ls3_5_ref, r=r, f=f, xout=xout, yout=yout)
-    
-    ls1_f6 = VCZT_objective_lens(path_ls1_14_ref, r=r, f=f, xout=xout, yout=yout)  
-    ls2_f6 = VCZT_objective_lens(path_ls2_12_ref, r=r, f=f, xout=xout, yout=yout)  
-    ls3_f6 = VCZT_objective_lens(path_ls3_6_ref, r=r, f=f, xout=xout, yout=yout) 
-    print("Time taken for generate XL experiment - in seconds", time.perf_counter() - tic)
-    
-    return ls1_f1, ls1_f2, ls1_f3, ls1_f4, ls1_f5, ls1_f6, ls2_f1, ls2_f2, ls2_f3, ls2_f4, ls2_f5, ls2_f6, ls3_f1, ls3_f2, ls3_f3, ls3_f4, ls3_f5, ls3_f6
+    return random_noise_distances, random_noise_slms, random_noise_wps, random_noise_amps, key0, key
