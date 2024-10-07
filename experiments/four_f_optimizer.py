@@ -1,9 +1,19 @@
+import os
+import sys
+
+# Setting the path for XLuminA modules:
+current_path = os.path.abspath(os.path.join('..'))
+module_path = os.path.join(current_path)
+
+if module_path not in sys.path:
+    sys.path.append(module_path)
+
 from four_f_optical_table import *
-# from xlumina.toolbox import MultiHDF5DataLoader
+from xlumina.toolbox import MultiHDF5DataLoader
 import time
 import jax
-from jax import grad, jit
-from jax.example_libraries import optimizers
+import optax
+from jax import jit
 import numpy as np
 import jax.numpy as jnp
 
@@ -82,7 +92,7 @@ def fit(params: optax.Params, optimizer: optax.GradientTransformation, num_itera
 
 # Optimizer settings
 num_iterations = 50000
-num_samples = 50
+num_samples = 1
 # Step size engineering:
 STEP_SIZE = 0.01
 WEIGHT_DECAY = 0.0001

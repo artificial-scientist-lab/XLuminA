@@ -1,17 +1,19 @@
 # Setting the path for XLuminA modules:
 import os
 import sys
+
+# Setting the path for XLuminA modules:
 current_path = os.path.abspath(os.path.join('..'))
-dir_path = os.path.dirname(current_path)
-module_path = os.path.join(dir_path)
+module_path = os.path.join(current_path)
+
 if module_path not in sys.path:
     sys.path.append(module_path)
-
+    
 import numpy as np
 import jax.numpy as jnp
-from __init__ import um, nm, mm, degrees, radians
+from __init__ import um, nm
 from xlumina.wave_optics import *
-from wave_optics import *
+from xlumina.optical_elements import *
 from xlumina.toolbox import space
 import h5py
 
@@ -95,7 +97,7 @@ for s in range(50):
     input_fields = jnp.vstack([input_circles, input_squares, input_annular]) 
     target_fields = jnp.vstack([target_circles, target_squares, target_annular]) 
 
-    filename = f"training_data_4f/synthetic_data_{s}.hdf5"
+    filename = f"new_training_data_4f/new_synthetic_data_{s+150}.hdf5"
     
     with h5py.File(filename, 'w') as hdf:
         # Create datasets for your data
