@@ -1,9 +1,11 @@
 # Setting the path for XLuminA modules:
 import os
 import sys
+
+# Setting the path for XLuminA modules:
 current_path = os.path.abspath(os.path.join('..'))
-dir_path = os.path.dirname(current_path)
-module_path = os.path.join(dir_path)
+module_path = os.path.join(current_path)
+
 if module_path not in sys.path:
     sys.path.append(module_path)
 
@@ -25,8 +27,12 @@ x_total = 1500*um
 x, y = space(x_total, sensor_lateral_size)
 shape = jnp.shape(x)[0]
 
+# 2. Define the light source:
+w0 = (1200*um , 1200*um)
+input_light = LightSource(x, y, wavelength)
+input_light.gaussian_beam(w0=w0, E0=1)
 
-# 2. Define the optical functions:
+# 3. Define the optical functions:
 def batch_dualSLM_4f(input_mask, x, y, wavelength, parameters):
     """
     [4f system coded exclusively for batch optimization purposes].
