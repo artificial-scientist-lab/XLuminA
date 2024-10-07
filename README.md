@@ -1,30 +1,56 @@
 # ✨ XLuminA ✨
 
+[![arXiv](https://img.shields.io/badge/arXiv-2310.08408-b31b1b.svg)](https://arxiv.org/abs/2310.08408)
+[![Downloads](https://pepy.tech/badge/xlumina)](https://pepy.tech/project/xlumina)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python Versions](https://img.shields.io/pypi/pyversions/xlumina.svg)](https://pypi.org/project/xlumina/)
+[![PyPI version](https://badge.fury.io/py/xlumina.svg)](https://badge.fury.io/py/xlumina)
+[![GitHub stars](https://img.shields.io/github/stars/artificial-scientist-lab/XLuminA.svg)](https://github.com/artificial-scientist-lab/XLuminA/stargazers)
+
  **XLuminA, a highly-efficient, auto-differentiating discovery framework for super-resolution microscopy**
 
+📖 <u> Read our paper here: </u>\
 [**XLuminA: An Auto-differentiating Discovery Framework for Super-Resolution Microscopy**](https://arxiv.org/abs/2310.08408#)\
 *Carla Rodríguez, Sören Arlt, Leonhard Möckl and Mario Krenn*
 
-## 💻 Installation:
+📚 <u> Related works featuring XLuminA:  </u>
 
-XLuminA can be installed with
+[![ICML](https://img.shields.io/badge/ICML-2024-blue.svg)](https://openreview.net/forum?id=ik9YuAHq6J&referrer=%5Bthe%20profile%20of%20Carla%20Rodríguez%5D(%2Fprofile%3Fid%3D~Carla_Rodríguez1)) **AI4Science Workshop** - *Oral contribution* 
 
+[![NeurIPS](https://img.shields.io/badge/NeurIPS-2023-purple.svg)](https://openreview.net/forum?id=J8HGMimNYe&referrer=%5Bthe%20profile%20of%20Carla%20Rodríguez%5D(%2Fprofile%3Fid%3D~Carla_Rodríguez1)) **AI4Science Workshop -** *Oral contribution*
+
+## 💻 Installation: 
+
+### Using PyPI:
+
+Create a new conda environment and install `xlumina`from PyPI. We recommend using `python=3.11`: 
 ```
+conda create -n xlumina_env python=3.11
+
+conda activate xlumina_env
+
 pip install xlumina
 ```
 
-which should install in about 10 seconds. This will install [**JAX and jaxlib**](https://jax.readthedocs.io/en/latest/index.html) (the version of JAX used in this project is v0.4.13), [**Optax**](https://github.com/google-deepmind/optax/tree/master) (the version of Optax used in this project is v0.1.7), and [**SciPy**](https://scipy.org) (the version of SciPy used in this project is v1.10.1).
+It should be installed in about 10 seconds. The package automatically installs:
+
+1. [**JAX (CPU only) and jaxlib**](https://jax.readthedocs.io/en/latest/index.html) (the version of JAX used in this project is v0.4.33), 
+
+2. [**Optax**](https://github.com/google-deepmind/optax/tree/master) (the version of Optax used in this project is v0.2.3), 
+
+3. [**SciPy**](https://scipy.org) (the version of SciPy used in this project is v1.14.1).
+
+### Clone repository:
+```
+git clone https://github.com/artificial-scientist-lab/XLuminA.git
+```
 
 ### GPU compatibility:
 
-The package automatically installs the CPU version of JAX. To install [JAX with NVIDIA GPU support](https://jax.readthedocs.io/en/latest/index.html) (**Note: wheels only available on linux**), use:
+To install [JAX with NVIDIA GPU support](https://jax.readthedocs.io/en/latest/installation.html) (**Note: wheels only available on linux**), use CUDA 12 installation:
 
 ```
-# CUDA 12 installation
-pip install --upgrade "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-
-# CUDA 11 installation
-pip install --upgrade "jax[cuda11_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+pip install --upgrade "jax[cuda12]"
 ```
 
 XLuminA has been tested on the following operating systems:
@@ -46,9 +72,9 @@ The simulator contains many features:
 
 ✦ Phase masks (e.g., spatial light modulators (SLMs), polarizers and general variable retarders (LCDs)).
 
-✦ Amplitude masks (e.g., circles, triangles and squares).
+✦ Amplitude masks (e.g., spatial light modulators (SLMs) and pre-defined circles, triangles and squares).
 
-✦ Beam splitters.
+✦ Beam splitters, fluorescence model for STED, and more! 
 
 ✦ The light propagation methods available in XLuminA are:
 
@@ -58,7 +84,7 @@ The simulator contains many features:
     
   - Propagation through [high NA objective lenses](https://doi.org/10.1016/j.optcom.2010.07.030) is availale to replicate strong focusing conditions in polarized light.
         
-# 📝 Example of usage:
+# 📝 Examples of usage:
 
 Examples of some experiments that can be reproduced with XLuminA are:
 
@@ -67,6 +93,8 @@ Examples of some experiments that can be reproduced with XLuminA are:
 * The [sharp focus of a radially polarized light beam](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.91.233901).
 
 The code for each of these optical setups is provided in the Jupyter notebook of [examples.ipynb](https://github.com/artificial-scientist-lab/XLuminA/blob/main/examples/examples.ipynb).
+
+➤ A **step-by-step guide on how to add noise to the optical elements** can be found in [noisy_4f_system.ipynb](https://github.com/artificial-scientist-lab/XLuminA/blob/main/examples/noisy_4f_system.ipynb).
 
 # 🚀 Testing XLuminA's efficiency:
 
@@ -84,15 +112,15 @@ We evaluated our framework by conducting several tests - see [Figure 1](https://
  
 <img src="miscellaneous/performance_convergence.png" alt="performance" width="700"/>
 
-The Jupyter notebook used for running these simulations is provided as [test_diffractio_vs_xlumina.ipynb](https://github.com/artificial-scientist-lab/XLuminA/blob/main/examples/test_diffractio_vs_xlumina.ipynb). 
+➤ The Jupyter notebook used for running these simulations is provided as [test_diffractio_vs_xlumina.ipynb](https://github.com/artificial-scientist-lab/XLuminA/blob/main/examples/test_diffractio_vs_xlumina.ipynb). 
 
-The Python files corresponding to numerical/autodiff evaluations are [numerical_methods_evaluation_diffractio.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/examples/numerical_methods_evaluation_diffractio.py), and [autodiff_evaluation_xlumina.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/examples/autodiff_evaluation_xlumina.py)
+➤ The Python files corresponding to numerical/autodiff evaluations are [numerical_methods_evaluation_diffractio.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/examples/numerical_methods_evaluation_diffractio.py), and [autodiff_evaluation_xlumina.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/examples/autodiff_evaluation_xlumina.py)
 
 *If you want to run the comparison test of the propagation functions, you need to install [**Diffractio**](https://pypi.org/project/diffractio/) - The version of Diffractio used in this project is v0.1.1.*
 
 # 🤖🔎 Discovery of new optical setups: 
 
-With XLuminA we were able to re-discover three foundational optics experiments: 
+With XLuminA we were able to rediscover three foundational optics experiments. In particular, we discover new, superior topologies together with their parameter settings using purely continuous optimization.
 
 ➤ Optical telescope (or 4f-correlator),
 
@@ -111,9 +139,24 @@ The Python files used for the discovery of these optical setups, as detailed in 
 | ***Large-scale polarization-based STED*** | [hybrid_sted_optical_table.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/hybrid_sted_optical_table.py) | [hybrid_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/hybrid_optimizer.py)| N/A |
 | ***Large-scale sharp focus (Dorn, Quabis and Leuchs, 2004)*** | [hybrid_sharp_optical_table.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/hybrid_sharp_optical_table.py) | [hybrid_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/hybrid_optimizer.py)| N/A |
 
-★ The optical tables and optimizers corresponding to the optimizations in ***previous versions (i.e., not including topological discovery)*** are defined in 
-[vsted_optical_table.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/vsted_optical_table.py) with [vsted_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/vsted_optimizer.py); [sharp_focus_optical_table.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/sharp_focus_optical_table.py) with [sharp_focus_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/sharp_focus_optimizer.py); [xl_optical_table.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/xl_optical_table.py) and [xl_optimizer.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/experiments/xl_optimizer.py).
+# 🦾🤖 Robustness and parallelized optimization of multiple optical tables with our noise-aware scheme: 
 
+✦ Importantly, to ensure simulations which approximate real-world experimental conditions we have included imperfections, misalignment, and noise sources in all optical components (during post-processing and/or during optimization). **All the results presented in the paper are computed considering a wide variety of experimental errors**. 
+
+➤ A **step-by-step guide on how to setup the optimization using this scheme** can be found in [noisy_optimization.ipynb](https://github.com/artificial-scientist-lab/XLuminA/blob/main/examples/noisy_optimization.ipynb).
+
+➤ A **step-by-step guide on how to add noise to the optical elements** can be found in [noisy_4f_system.ipynb](https://github.com/artificial-scientist-lab/XLuminA/blob/main/examples/noisy_4f_system.ipynb).
+
+<img src="miscellaneous/noise-aware.png" alt="noise_aware" width="700"/>
+
+✦ The optimization procedure is as follows: for each optimization step, we execute $N$ parallel optical tables using `vmap`. Then, we sample random noise and apply it to all available physical variables across each of the $N$ optical tables. The random noise is **uniformly distributed** and includes:
+   * Phase values for spatial light modulators (SLMs) and wave plates (WP) in the range of $\pm$ (0.01 to 0.1) radians, covering all qualities available in current experimental devices. 
+   * Misalignment ranging from $\pm$ (0.01 to 0.1) millimeters, covering both expert-level precision ($\pm$ 0.01 mm) and beginner-level accuracy ($\pm$ 0.1 mm).
+   * 1\% imperfection on the transmissivity/reflectivity of beam splitters (BS), which is a realistic approach given the high quality of the currently available hardware.  
+
+We then simulate the optical setup for each of the $N$ tables simultaneously, incorporating the sampled noise. The loss function is computed independently for each of the setups. Afterwards, we calculate the mean loss value across all optical tables, which provides an average performance metric that accounts for the introduced experimental variability (noise). The gradients are computed based on this mean loss value and so the update of the system parameters'. 
+
+Importantly, before applying the updated parameters and proceeding to the next iteration, we resample new random noise for each optical table. This ensures that each optimization step encounters different noise values, further enhancing the robustness of the solution. This procedure is repeated iteratively until convergence.
 
 # 👀 Overview:
 
@@ -163,9 +206,11 @@ In this section we list the available functions in different files and a brief d
     | `jones_LP` | Jones matrix of a [linear polarizer](https://doi.org/10.1201/b19711)| 
     | `jones_general_retarder` | Jones matrix of a [general retarder](https://www.researchgate.net/publication/235963739_Obtainment_of_the_polarizing_and_retardation_parameters_of_a_non-depolarizing_optical_system_from_the_polar_decomposition_of_its_Mueller_matrix). |
     | `jones_sSLM` | Jones matrix of the *superSLM*. |
+    | `jones_sSLM_with_amplitude` | Jones matrix of the *superSLM* that modulates phase & amplitude. |
     | `jones_LCD` | Jones matrix of liquid crystal display (LCD).|
     | ***Polarization-based devices*** | - | 
     |`sSLM` | *super*-Spatial Light Modulator: adds phase mask (pixel-wise) to $E_x$ and $E_y$ independently. |
+    | `sSLM_with_amplitude` | *super*-Spatial Light Modulator: adds phase mask and amplitude mask (pixel-wise) to $E_x$ and $E_y$ independently. |
     | `LCD` | Liquid crystal device: builds any linear wave-plate. | 
     | `linear_polarizer` | Linear polarizer.|
     | `BS_symmetric` | Symmetric beam splitter.|
@@ -175,24 +220,27 @@ In this section we list the available functions in different files and a brief d
     | `VCZT_objective_lens` | Propagation through high NA objective lens (only for `VectorizedLight`).|
     | ***General elements*** | - | 
     | `lens` | Transparent lens of variable size and focal length.|
+    | `cylindrical_lens` | Transparent plano-convex cylindrical lens of variable focal length. | 
+    | `axicon_lens` | Axicon lens function that produces a Bessel beam. | 
     | `circular_mask` | Circular mask of variable size. |
     | `triangular_mask` | Triangular mask of variable size and orientation.|
     | `rectangular_mask` | Rectangular mask of variable size and orientation.|
     | `annular_aperture` | Annular aperture of variable size.|
     | `forked_grating` | Forked grating of variable size, orientation, and topological charge. |
-    | ***Pre-built optical setups*** | - | 
+    | 👷‍♀️ ***Pre-built optical setups*** | - | 
+    | `bb_amplitude_and_phase_mod` | Basic building unit. Consists of a `sSLM` (amp & phase modulation), and `LCD` linked via `VRS_propagation`. |
     | `building_block` | Basic building unit. Consists of a `sSLM`, and `LCD` linked via `VRS_propagation`. |
     | `fluorescence`| Fluorescence model.|
+    | `vectorized_fluorophores` | Vectorized version of `fluorescence`: Allows to compute effective intensity across an array of detectors.| 
+    | `robust_discovery` | 3x3 setup for hybrid (topology + optical settings) discovery with single wavelength. Longitudinal intensity (Iz) is measured across all detectors. Includes noise for robustness. |
     | `hybrid_setup_fixed_slms_fluorophores`| 3x3 optical table with SLMs randomly positioned displaying fixed phase masks; to be used for pure topological discovery; contains the fluorescence model in all detectors. (*Fig. 4a* of [our paper](https://arxiv.org/abs/2310.08408#))|
     | `hybrid_setup_fixed_slms`| 3x3 optical table with SLMs randomly positioned displaying fixed phase masks; to be used for pure topological discovery. (*Fig. 4b* of [our paper](https://arxiv.org/abs/2310.08408#))|
     | `hybrid_setup_fluorophores`| 3x3 optical table to be used for hybrid (topological + optical parameter) discovery; contains the fluorescence model in all detectors . (*Fig. 5a* and *Fig. 6* of [our paper](https://arxiv.org/abs/2310.08408#))|
     | `hybrid_setup_sharp_focus`| 3x3 optical table to be used for hybrid (topological + optical parameter) discovery. (*Fig. 5b* of [our paper](https://arxiv.org/abs/2310.08408#))|
     | `six_times_six_ansatz`| 6x6 optical table to be used for pure topological discovery. (*Extended Data Fig. 6* of [our paper](https://arxiv.org/abs/2310.08408#))|
-    | `general_setup` | Optical table with the general setup for large-scale discovery (*Fig. 3* of [our paper](https://arxiv.org/abs/2310.08408#)).|
-    | `vSTED` | Optical table with the vectorial-based STED setup (*Extended Data Fig. 4a* of [our paper](https://arxiv.org/abs/2310.08408#)).|
-    | `sharp_focus` | Optical table with the sharp focus of a radially polarized light beam setup (*Extended Data Fig. 4b* of [our paper](https://arxiv.org/abs/2310.08408#)).|
-    | `xl_setup` | Optical table with the large set-up (*Fig.6a* [previous version v3 of our paper](https://arxiv.org/abs/2310.08408#)).|
-    
+    | 🫨 ***Add noise to the optical elements*** | - | 
+    |`shake_setup`| Literally shakes the setup: creates noise and misalignment for the optical elements. Accepts noise settings (dictionary) as argument. Can't be used with `jit` across parallel optical tables. | 
+    |`shake_setup_jit`| Same as `shake_setup`. Doesn't accept noise settings as argument. Intended to be pasted in the optimizer file to enable `jit` compilation across parallel optical tables.| 
 
 4. In [toolbox.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/toolbox.py): file with useful functions. 
 
@@ -206,11 +254,21 @@ In this section we list the available functions in different files and a brief d
    | `delta_kronecker` | Kronecker delta.|
    | `build_LCD_cell` | Builds the cell for `LCD`.|
    | `draw_sSLM` | Plots the two phase masks of `sSLM`.|
+   | `draw_sSLM_amplitude` | Plots the two amplitude masks of `sSLM`.|
    | `moving_avg` | Compute the moving average of a dataset.|
+   | `image_to_binary_mask`| Converts image (png, jpeg) to binary mask. |
    | `rotate_mask` | Rotates the (X, Y) frame w.r.t. given point. |
+   | `gaussian` | Defines a 1D Gaussian distribution. |
+   | `gaussian_2d` | Defines a 2D Gaussian distribution. |
+   | `lorentzian` | Defines a 1D Lorentzian distribution. |
+   | `lorentzian_2d` | Defines a 2D Lorentzian distribution. |
+   | `fwhm_1d_fit` | Computes FWHM in 1D using fit for `gaussian` or `lorentzian`.|
+   | `fwhm_2d_fit` | Computes FWHM in 2D using fit for `gaussian_2d` or `lorentzian_2d`. |
    | `profile` | Determines the profile of a given input without using interpolation.|
-   | `spot_size` | Computes the spot size as  $\pi (FWHM_x \cdot FWHM_y) /\lambda^2$. |
-   | `compute_fwhm` | Computes FWHM in 2D. |
+   | `spot_size` | Computes the spot size as  $\pi (\text{FWHM}_x \cdot \text{FWHM}_y) /\lambda^2$. |
+   | `compute_fwhm` | Computes FWHM in 1D or 2D using fit: `gaussian`, `gaussian_2d`, `lorentzian`, `lorentzian_2`. |
+   | 📑 ***Data loader*** | - |
+   | `MultiHDF5DataLoader` | Data loader class for 4f system training. |
    
 5. In [loss_functions.py](https://github.com/artificial-scientist-lab/XLuminA/blob/main/xlumina/loss_functions.py): file with loss functions.
 
@@ -224,8 +282,6 @@ In this section we list the available functions in different files and a brief d
    | `vMSE_Amplitude` | Parallel computation of Mean Squared Error (Amplitude) for a given electric field component $E_x$, $E_y$ or $E_z$. |
    | `MSE_Amplitude` | Mean Squared Error (Amplitude) for a given electric field component $E_x$, $E_y$ or $E_z$. |
    | `mean_batch_MSE_Intensity` | Batch-based `MSE_Intensity`.|
-   | `small_area` | Fraction of intensity comprised inside the area of a mask.|
-   | `small_area_STED` | Fraction of intensity comprised inside the area of a mask - STED version.|
 
 # ⚠️ Considerations when using XLuminA:
  
@@ -243,13 +299,7 @@ In this section we list the available functions in different files and a brief d
 
 # 💻 Development:
 
-*Some functionalities of XLuminA’s optics simulator (e.g., optical propagation algorithms, planar lens or amplitude masks) are inspired in an open-source NumPy-based Python module for diffraction and interferometry simulation, [Diffractio](https://pypi.org/project/diffractio/), although we have rewritten and modified these approaches to combine them with JAX just-in-time (jit) functionality. On top of that, we developed completely new functions (e.g., beam splitters, LCDs or propagation through high NA objective lens with CZT methods, to name a few) which significantly expand the software capabilities.*
-
-## Clone repository:
-
-```
-git clone https://github.com/artificial-scientist-lab/XLuminA.git
-```
+*Some functionalities of XLuminA’s optics simulator (e.g., optical propagation algorithms, lens or amplitude masks) are inspired in an open-source NumPy-based Python module for diffraction and interferometry simulation, [Diffractio](https://pypi.org/project/diffractio/). <u>**We have rewritten and modified these approaches to combine them with JAX just-in-time (jit) functionality**</u>. We labeled these functions as such in the docstrings. On top of that, <u>**we developed completely new functions**</u> (e.g., sSLMs, beam splitters, LCDs or propagation through high NA objective lens with CZT methods, to name a few) <u>**which significantly expand the software capabilities.</u>***
 
 # 📝 How to cite XLuminA:
 
