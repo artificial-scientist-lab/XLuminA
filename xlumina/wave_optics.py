@@ -7,8 +7,10 @@ import time
 
 from .toolbox import rotate_mask
 
-# Comment this line if float32 is enough precision for you. 
-config.update("jax_enable_x64", True)
+# Set this to False if f64 is enough precision for you.
+enable_float64 = True
+if enable_float64:
+    config.update("jax_enable_x64", True)
 
 """ 
 Module for scalar optical fields.
@@ -190,7 +192,7 @@ class ScalarLight:
         
         propagated_light = ScalarLight(self.x, self.y, self.wavelength)
         propagated_light.field = RS_propagation_jit(self.field, z, nx, ny, dx, dy, Xext, Yext, self.k)
-        print("Time taken to perform one RS propagation (in seconds):", time.perf_counter() - tic)
+        print(f"Time taken to perform one RS propagation (in seconds): {(time.perf_counter() - tic):.4f}")
         return propagated_light, quality_factor
     
     def get_RS_minimum_z(self, n=1, quality_factor=1):
@@ -257,7 +259,7 @@ class ScalarLight:
         # Build ScalarLight object with output field.
         field_out = ScalarLight(xout, yout, self.wavelength)
         field_out.field = field_at_z
-        print("Time taken to perform one CZT propagation (in seconds):", time.perf_counter() - tic)
+        print(f"Time taken to perform one CZT propagation (in seconds): {(time.perf_counter() - tic):.4f}")
         return field_out
 
 def build_grid(x, y):

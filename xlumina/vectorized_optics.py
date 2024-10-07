@@ -8,8 +8,12 @@ import time
 from .toolbox import profile
 from .wave_optics import build_grid, RS_propagation_jit, build_CZT_grid, CZT_jit, CZT_for_high_NA_jit
 
-# Comment this line if float32 is enough precision for you. 
-config.update("jax_enable_x64", True)
+# Set this to False if f64 is enough precision for you.
+enable_float64 = True
+d_type = jnp.complex64
+if enable_float64:
+    config.update("jax_enable_x64", True)
+    d_type = jnp.complex128
  
 """ 
 Module for vectorized optical fields:
@@ -39,9 +43,9 @@ class VectorizedLight:
         self.k = 2 * jnp.pi / wavelength
         self.n = 1
         shape = (jnp.shape(x)[0], jnp.shape(y)[0])
-        self.Ex = jnp.zeros(shape, dtype=jnp.complex128)
-        self.Ey = jnp.zeros(shape, dtype=jnp.complex128)
-        self.Ez = jnp.zeros(shape, dtype=jnp.complex128)
+        self.Ex = jnp.zeros(shape, dtype=d_type)
+        self.Ey = jnp.zeros(shape, dtype=d_type)
+        self.Ez = jnp.zeros(shape, dtype=d_type)
         self.info = 'Vectorized light'
         
     def draw(self, xlim='', ylim='', kind='', extra_title='', save_file=False, filename=''):
@@ -276,7 +280,7 @@ class VectorizedLight:
         light_out.Ey = E_out[:, :, 1]
         light_out.Ez = E_out[:, :, 2]
 
-        print("Time taken to perform one VRS propagation (in seconds):", time.perf_counter() - tic)
+        print(f"Time taken to perform one VRS propagation (in seconds): {(time.perf_counter() - tic):.4f}")
         return light_out, quality_factor
     
     def get_VRS_minimum_z(self, n=1, quality_factor=1):
@@ -353,7 +357,7 @@ class VectorizedLight:
         light_out.Ey = E_out[:, :, 1]
         light_out.Ez = E_out[:, :, 2]
         
-        print("Time taken to perform one VCZT propagation (in seconds):", time.perf_counter() - tic)
+        print(f"Time taken to perform one VCZT propagation (in seconds):  {(time.perf_counter() - tic):.4f}")
         return light_out
     
     
