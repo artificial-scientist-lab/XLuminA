@@ -2,15 +2,15 @@ import jax.numpy as jnp
 from jax import jit, vmap, config
 from .__init__ import um
 
-# Comment this line if float32 is enough precision for you. 
-config.update("jax_enable_x64", True)
+# Set this to False if f64 is enough precision for you.
+enable_float64 = True
+if enable_float64:
+ config.update("jax_enable_x64", True)
 
 """ Loss functions:
 
     - small_area_hybrid
     - vectorized_loss_hybrid
-    - small_area_STED
-    - small_area
     - mean_batch_MSE_Intensity
     - vMSE_Amplitude
     - vMSE_Phase
@@ -48,39 +48,6 @@ def vectorized_loss_hybrid(detected_intensities):
     loss_val = vloss(detected_intensities)
     # Returns (M, 1, 1) shape
     return loss_val
-
-
-
-
-def small_area_STED(sted_i_effective):
-    """
-    Computes the fraction of intensity comprised inside the area of a mask for STED-like output.
-
-    Parameters:
-        sted_i_effective (jnp.array): Effective intensity in the focal plane of the objective lens for STED.
-        + epsilon (float): fraction of minimum intensity comprised inside the area.
-        
-    Return loss function (jnp.array).
-    """
-    epsilon = 0.5
-    I = sted_i_effective / jnp.sum(sted_i_effective)
-    mask = jnp.where(I > epsilon*jnp.max(I), 1, 0)
-    return jnp.sum(mask) / (jnp.sum(mask * I))
-
-def small_area(focused_field):
-    """
-    Computes the fraction of intensity comprised inside the area of a mask.
-
-    Parameters:
-    focused_field (object): VectorizedLight in the focal plane of an objective lens.
-    + epsilon (float): fraction of minimum intensity comprised inside the area.
-        
-    Return type jnp.array.
-    """
-    epsilon = 0.5
-    I = jnp.abs(focused_field.Ez)**2 / jnp.sum(jnp.abs(focused_field.Ez)**2)
-    mask = jnp.where(I > epsilon*jnp.max(I), 1, 0)
-    return jnp.sum(mask) / jnp.sum(mask * I)
 
 def mean_batch_MSE_Intensity(optimized, target):
     """
