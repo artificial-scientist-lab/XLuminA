@@ -3,6 +3,7 @@
 [![arXiv](https://img.shields.io/badge/arXiv-2310.08408-b31b1b.svg)](https://arxiv.org/abs/2310.08408)
 [![Downloads](https://pepy.tech/badge/xlumina)](https://pepy.tech/project/xlumina)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![Tests](https://github.com/artificial-scientist-lab/XLuminA/actions/workflows/pytests.yml/badge.svg)
 [![Python Versions](https://img.shields.io/pypi/pyversions/xlumina.svg)](https://pypi.org/project/xlumina/)
 [![PyPI version](https://badge.fury.io/py/xlumina.svg)](https://badge.fury.io/py/xlumina)
 [![GitHub stars](https://img.shields.io/github/stars/artificial-scientist-lab/XLuminA.svg)](https://github.com/artificial-scientist-lab/XLuminA/stargazers)
@@ -82,7 +83,7 @@ The simulator contains many features:
      
   - [Chirped z-transform](https://doi.org/10.1038/s41377-020-00362-z). This algorithm is an accelerated version of the Rayleigh-Sommerfeld method, which allows for arbitrary selection and sampling of the region of interest.
     
-  - Propagation through [high NA objective lenses](https://doi.org/10.1016/j.optcom.2010.07.030) is availale to replicate strong focusing conditions in polarized light.
+  - Propagation through [high NA objective lenses](https://doi.org/10.1016/j.optcom.2010.07.030) is available to replicate strong focusing conditions using polarized light.
         
 # 📝 Examples of usage:
 
