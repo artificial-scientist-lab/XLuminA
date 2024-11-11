@@ -1,7 +1,7 @@
 # ✨ XLuminA ✨
 
 [![arXiv](https://img.shields.io/badge/arXiv-2310.08408-b31b1b.svg)](https://arxiv.org/abs/2310.08408)
-![PyPI Downloads](https://static.pepy.tech/badge/xlumina)
+[![Downloads](https://pepy.tech/badge/xlumina)](https://pepy.tech/project/xlumina)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![Tests](https://github.com/artificial-scientist-lab/XLuminA/actions/workflows/pytests.yml/badge.svg)
 [![Python Versions](https://img.shields.io/pypi/pyversions/xlumina.svg)](https://pypi.org/project/xlumina/)
