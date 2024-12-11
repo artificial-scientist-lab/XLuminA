@@ -1,6 +1,6 @@
 # ✨ XLuminA ✨
 
-[![arXiv](https://img.shields.io/badge/arXiv-2310.08408-b31b1b.svg)](https://arxiv.org/abs/2310.08408)
+[![Nature Communications](https://img.shields.io/badge/Nat_Commun-15,_10658_(2024)-b31b1b.svg)](https://www.nature.com/articles/s41467-024-54696-y)
 [![Downloads](https://pepy.tech/badge/xlumina)](https://pepy.tech/project/xlumina)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![Tests](https://github.com/artificial-scientist-lab/XLuminA/actions/workflows/pytests.yml/badge.svg)
@@ -10,11 +10,16 @@
 
  **XLuminA, a highly-efficient, auto-differentiating discovery framework for super-resolution microscopy**
 
-📖 <u> Read our paper here: </u>\
-[**XLuminA: An Auto-differentiating Discovery Framework for Super-Resolution Microscopy**](https://arxiv.org/abs/2310.08408#)\
+📄 <u> Read our paper here: </u>\
+[**Automated discovery of experimental designs in super-resolution microscopy with XLuminA**](https://doi.org/10.1038/s41467-024-54696-y)\
 *Carla Rodríguez, Sören Arlt, Leonhard Möckl and Mario Krenn*
 
+📰 <u> Read the press release: </u>\
+[**10,000 times faster than traditional methods: new computational framework automatically discovers experimental designs in microscopy**](https://mpl.mpg.de/news-events/news-from-the-institute/news-detail/news-detail/news-detail?tx_news_pi1%5Baction%5D=detail&tx_news_pi1%5Bcontroller%5D=News&tx_news_pi1%5Bnews%5D=1498&cHash=2d87c38397926a3fa6858793edb05fe9)
+
 📚 <u> Related works featuring XLuminA:  </u>
+
+[![NeurIPS](https://img.shields.io/badge/NeurIPS-2024-red.svg)](https://ml4physicalsciences.github.io/2024/) **Machine Learning and the Physical Sciences Workshop -** *Poster*
 
 [![ICML](https://img.shields.io/badge/ICML-2024-blue.svg)](https://openreview.net/forum?id=ik9YuAHq6J&referrer=%5Bthe%20profile%20of%20Carla%20Rodríguez%5D(%2Fprofile%3Fid%3D~Carla_Rodríguez1)) **AI4Science Workshop** - *Oral contribution* 
 
@@ -306,11 +311,17 @@ In this section we list the available functions in different files and a brief d
 
 If you use this software, please cite as:
 
-    @misc{rodríguez2023xlumina,
-      title={XLuminA: An Auto-differentiating Discovery Framework for Super-Resolution Microscopy}, 
-      author={Carla Rodríguez and Sören Arlt and Leonhard Möckl and Mario Krenn},      
-      year={2023},      
-      eprint={2310.08408},      
-      archivePrefix={arXiv},      
-      primaryClass={physics.optics}      
+   Rodríguez, C., Arlt, S., Möckl, L. and Krenn, M. Automated discovery of experimental designs in super-resolution microscopy with XLuminA. *Nat Commun* **15**, 10658 (2024). https://doi.org/10.1038/s41467-024-54696-y
+
+BibTeX format:
+
+    @article{NatCommun.15.10658,
+      title={Automated discovery of experimental designs in super-resolution microscopy with {XLuminA}},
+      author={Rodríguez, Carla and Arlt, Sören and Möckl, Leonhard and Krenn, Mario},
+      journal={Nature Communications},
+      volume={15},
+      pages={10658},
+      year={2024},
+      publisher={Nature Publishing Group},
+      doi={10.1038/s41467-024-54696-y}
     }
