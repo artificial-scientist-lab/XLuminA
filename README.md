@@ -15,7 +15,7 @@
 *Carla Rodríguez, Sören Arlt, Leonhard Möckl and Mario Krenn*
 
 📰 <u> Read the press release: </u>\
-[**10,000 times faster than traditional methods: new computational framework automatically discovers experimental designs in microscopy**](https://mpl.mpg.de/news-events/news-from-the-institute/news-detail/news-detail/news-detail?tx_news_pi1%5Baction%5D=detail&tx_news_pi1%5Bcontroller%5D=News&tx_news_pi1%5Bnews%5D=1498&cHash=2d87c38397926a3fa6858793edb05fe9)
+[**10,000 times faster than traditional methods: new computational framework automatically discovers experimental designs in microscopy**](https://mpl.mpg.de/news/article/10000-times-faster-than-traditional-methods-new-computational-framework-automatically-discovers-experimental-designs-in-microscopy)
 
 📚 <u> Related works featuring XLuminA:  </u>
 
